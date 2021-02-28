@@ -1,6 +1,6 @@
 # Functions that I will be using here
 
-FileExtraction(){ # Extract Files from an array using results from another array
+FileIdentification(){ # Extract Files from an array using results from another array
 	local sample=$1 # Basename of the file
 	local arrayFiles=$files
 
@@ -84,22 +84,16 @@ FastaorFastq(){ # Figuring out if fasta or fastq
 	fi
 }
 
-# This here will be the main section of the script.  Would be replaced by what I'm currently using.
-declare -r folder=$1 # Don't want any shenanigans going on here
-declare -r files=$(find TestingArea/* -type f -printf "%f\n") # Making an array of files
-#echo "$files"
-
-DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs to the variable sample
-
-for sample in ${samples[@]}; do # Iterating over an array of Samples
-	FileExtraction $sample # Extracting the file names.  Will be saved as $sampleFiles
+FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
+	# Unsetting variables in case they're already defined from a previous run 
 	unset merged
 	unset r1
 	unset r2
-	
+
+	# Creating a hidden text file of file names
 	printf '%s\n' "${sampleFiles[@]}" > .hiddenlist.list
-	echo $sample
-	# Need to get the files into their correct variables
+
+	# Identifying the files
 	if grep -P -i -q "r1" .hiddenlist.list; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
 	        r1="$folder/$fileName"
@@ -122,9 +116,31 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
 	        merged="$folder/$fileName"
 	fi
-	printf "MERGED:$merged\nR1:$r1\nR2:$r2\n-------\n"
 
-	#sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep -P "$sample" | tr '\012' ' '))
+	rm .hiddenlist.list
+}
+
+# This here will be the main section of the script.  Would be replaced by what I'm currently using.
+declare -r folder=$1 # Don't want any shenanigans going on here
+declare -r files=$(find TestingArea/* -type f -printf "%f\n") # Making an array of files
+#echo "$files"
+
+DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
+
+for sample in ${samples[@]}; do # Iterating over an array of Samples
+	FileIdentification $sample # Extracting the file names.  Will be saved as $sampleFiles
+	FileExtraction
+
+	printf "MERGED:$merged\nR1:$r1\nR2:$r2\n" # Debugging only
+
+	if [ -v merged ] && [ -v r1 ] && [ -v r2 ]; then
+		printf "$sample will run the whole shebang\n--------\n"
+	elif [ -v merged ] && [ -z ${r1+x} ] && [ -z ${r2+x} ]; then
+		printf "$sample will run only the merged file\n--------\n"
+	elif [ -z ${merged+x} ] && [ -v r1 ] && [ -v r2 ]; then
+		printf "$sample will only run the paired file\n--------\n"
+	else
+		printf "$sample has an odd combination.  It will be skipped\n--------\n"
+	fi
+
 done
-
-rm .hiddenlist.list
