@@ -2,16 +2,17 @@
 ######################################
 ### Functions that I'll be calling ###
 ######################################
-usage() { printf 'BWA ALN Mapping V1
+usage() { printf 'BWA aln Mapping V1
 	Mapping using aln is more complicated than it warrants,
 	so here is a useful wrapper that will hopefully make life
 	easier.
-        -i\tThe folder the fasta files
+	-i\tThe folder the fasta files (REQUIRED)
 	-o\tOutput folder of the BAM files (Default: BWAMappingScript)
-        -r\tThe BWA index.  Will be mapping reads against it
+	-r\tThe BWA index.  Will be mapping reads against it (REQUIRED)
 	-k\tMinimum Fragment Length (Default: 30)
 	-q\tMinimum Mapping Quality (Default: 30)
-        -n\tNumber of CPU Threads to be used
+	-d\tDeduplicate the bam files? (Default: FALSE)
+	-n\tNumber of CPU Threads to be used (Default: 8)
 	-l\tLog File Name (Default: $date)
         -h\tShow this help message and exit\n' 1>&2; exit 1; }
 
@@ -24,7 +25,8 @@ log() {	printf "BWA aln settings for $(date):
 	-------------------------------------
 	Min Quality:\t${qual}
 	Min Length:\t${len}
-	Deduplicated:\t${dedup}\n"; exit 0;
+	Deduplicated:\t${dedup}
+	-------------------------------------\n"; exit 0;
 }
 
 FileIdentification(){ # Extract Files from an array using results from another array
@@ -113,9 +115,14 @@ FastaorFastq(){ # Figuring out if fasta or fastq
 
 FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
 	# Unsetting variables in case they're already defined from a previous run 
-	unset merged
-	unset r1
-	unset r2
+	# unset merged
+	# unset r1
+	# unset r2
+
+	# This here is a fix that's needed if -v doesn't
+	merged="NA"
+	r1="NA"
+	r2="NA"
 
 	# Creating a hidden text file of file names
 	printf '%s\n' "${sampleFiles[@]}" > .hiddenlist.list
@@ -148,17 +155,19 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 }
 
 alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
-	if [ -v merged ]; then # If I found a merged file
+	if [ "$merged" != "NA" ]; then # If I found a merged file
+	#if [ -v merged ]; then # If I found a merged file
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $merged -t $ncores 2>/dev/null > tmp.sai
 	
 		bwa samse $ref tmp.sai $merged 2>/dev/null |\
 			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam|\
 			samtools sort -	> tmpM.bam
 	
-		samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq
+		samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
 	fi
 	
-	if [ -v r1 ]; then # If we have paired reads
+	if [ "$r1" != "NA" ]; then # If I found a merged file
+	#if [ -v r1 ]; then # If we have paired reads
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $r1 -t $ncores 2>/dev/null > tmp1.sai # First index
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $r2 -t $ncores 2>/dev/null > tmp2.sai # Second Index
 	
@@ -171,16 +180,18 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	fi
 	
 	# Merging the files if needed.  Otherwise, we can ignore and simply mv it
-	if [ -v merged ] && [ -v r1 ]; then
+	#if [ -v merged ] && [ -v r1 ]; then
+	if [ "$merged" != "NA" ] && [ "r1" != "NA" ]; then
 		samtools merge -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam
-	elif [ -v merged ] && [ -z ${r1+x} ]; then
+	elif [ "$merged" != "NA" ] && [ "r1" == "NA" ]; then
+	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 		mv tmpM.bam ${out}MappedReads/$sample.bam
 	else
 		mv tmpP.bam ${out}MappedReads/$sample.bam
 	fi
 
 	# Deleting temporary files
-	rm tmpP.bam tmpM.bam
+	rm tmpP.bam tmpM.bam tmp.bam tmp*.sai
 
 }
 
@@ -241,8 +252,8 @@ while getopts "i:o:q:r:l:k:n:hd" arg; do
 done
 
 # Testing if files options are missing
-if [ -z ${folder+x} ] || [ -z ${ref+x} ] || [ -z ${out+x} ]; then
-	echo "You are missing a key variable"
+if [ -z ${folder+x} ] || [ -z ${ref+x} ]; then
+	echo "You are missing either the Input folder or the reference"
 	exit 1
 fi
 
@@ -270,17 +281,21 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	#printf "$sample\n"
 	#printf "MERGED:$merged\nR1:$r1\nR2:$r2\n" | tee -a $log # Debugging only
 
-	if [ -v merged ] && [ -v r1 ] && [ -v r2 ]; then
+	# This here is to prevent odd scenarios where I only have r1 or Merged + r2
+	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
+	#if [ -v $merged ] && [ -v $r1 ] && [ -v $r2 ]; then
 		#printf "$sample will run the whole shebang\n--------\n"
 		alnMapping
-	elif [ -v merged ] && [ -z ${r1+x} ] && [ -z ${r2+x} ]; then
+	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ] && [ "$r2" == "NA" ]; then
+	#elif [ -v $merged ] && [ -z ${r1+x} ] && [ -z ${r2+x} ]; then
 		#printf "$sample will run only the merged file\n--------\n"
 		alnMapping
-	elif [ -z ${merged+x} ] && [ -v r1 ] && [ -v r2 ]; then
+	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
+	#elif [ -z ${merged+x} ] && [ -v $r1 ] && [ -v $r2 ]; then
 		#printf "$sample will only run the paired file\n--------\n"
 		alnMapping
 	else
-		printf "$sample has an odd combination.  It has been skipped\n" | tee -a $log
+		printf "$sample has an odd combination.  It has been skipped\n" >> $log
 	fi
 
 	# A simple counter
@@ -290,4 +305,7 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 done
 
 # Only if requested
-[ ${dedup} == "TRUE" ] && parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
+if [ "${dedup}" == "TRUE" ]; then
+	echo "Deduplication Requested"
+       parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
+fi
