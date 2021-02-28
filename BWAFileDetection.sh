@@ -122,7 +122,7 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 
 # This here will be the main section of the script.  Would be replaced by what I'm currently using.
 declare -r folder=$1 # Don't want any shenanigans going on here
-declare -r files=$(find TestingArea/* -type f -printf "%f\n") # Making an array of files
+declare -r files=$(find $folder/* -type f -printf "%f\n") # Making an array of files
 #echo "$files"
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
@@ -131,6 +131,7 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	FileIdentification $sample # Extracting the file names.  Will be saved as $sampleFiles
 	FileExtraction
 
+	printf "$sample\n"
 	printf "MERGED:$merged\nR1:$r1\nR2:$r2\n" # Debugging only
 
 	if [ -v merged ] && [ -v r1 ] && [ -v r2 ]; then
