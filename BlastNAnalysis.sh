@@ -1,8 +1,9 @@
 # To be done:
-# 	* Complete rewrite with more of a focus on functions
-# 	* Remove reliance of seqkit
-# 	* Progress bar for Blast (will require a trap and while loop)
-# 	* Integration (with option for ignoring) the LCA script for blast
+# 	• Complete rewrite with more of a focus on functions
+# 	• Remove reliance of seqkit
+# 	• Automatic Gzip control
+# 	• Progress bar for Blast (will require a trap and while loop)
+# 	• Integration (with option for ignoring) the LCA script for blast
 
 usage() { printf "BlastN/P Wrapper Script V0.6
 	Outputs tab deliminated BlastN/P report file in the form of std staxid.  Taxa counts
