@@ -91,7 +91,7 @@ FileIdentification(){ # Extract Files from an array using results from another a
 DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	#echo "$array"
-	local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
+	local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%%_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
 
 }
@@ -195,6 +195,18 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 
 }
 
+ProgressBar() { # From github.com/fearside/ProgressBar
+	# Process data
+		let _progress=(${1}*100/${2}*100)/100
+		let _done=(${_progress}*4)/10
+		let _left=40-$_done
+	# Build progressbar string lengths
+	_done=$(printf "%${_done}s")
+	_left=$(printf "%${_left}s")
+	printf "\rProgress : [${_done// />}${_left// /-}] ${_progress}%%"
+
+}	
+
 ######################
 ### Default values ###
 ######################
@@ -272,14 +284,16 @@ DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable 
 
 # The actual loop
 total=${#samples[@]}
-count="1"
+count=0
 
 for sample in ${samples[@]}; do # Iterating over an array of Samples
+	ProgressBar $count $total
+
 	FileIdentification $sample # Extracting the file names.  Will be saved as $sampleFiles
 	FileExtraction
 
-	#printf "$sample\n"
-	#printf "MERGED:$merged\nR1:$r1\nR2:$r2\n" | tee -a $log # Debugging only
+#	printf "$sample\n"
+#	printf "MERGED:$merged\nR1:$r1\nR2:$r2\n" | tee -a $log # Debugging only
 
 	# This here is to prevent odd scenarios where I only have r1 or Merged + r2
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
@@ -299,7 +313,7 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	fi
 
 	# A simple counter
-	printf "$sample has been filtered ($count/$total)\n--------\n"
+	#printf "$sample has been filtered ($count/$total)\n--------\n"
 	count=$(echo "$count + 1" | bc)
 
 done

@@ -46,9 +46,9 @@ ProgressBar() { # From github.com/fearside/ProgressBar
 blastCMD() { # The Meat and Potatoes of the script
 	local in=$1
 	local sample=$(basename $in .fasta)
-	rm -rf ${out} # Delete the folder if it already exists
 	mkdir -p ${out}
-
+	
+	echo "Running $blast for $sample"
 	if [ "$blast" == "blastn" ]; then
 		blastn -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores -perc_identity $Pident -task blastn > ${out}/$sample.tab &
 		pid=$! # Getting the PID of the blast run
@@ -134,7 +134,7 @@ usage() { printf "BlastN/P Wrapper Script V0.9
 
 log() {	printf "Blast settings for $(date):
 	Log File:\t${log}
-	Input folder:\t${in}
+	Input folder:\t${folder}
 	Output folder:\t${out}
 	Blast Type:\t${blast}
 	Blast Database:\t${db}
@@ -152,8 +152,8 @@ export -f GzipDetection # important as I'm running this in parallel
 #export -f ProgressBar
 
 # Preset Variables
-declare -r folder=$1
-declare -r files=$(find $folder/* -type f -printf "%f\n") # Making an array of files
+#declare -r folder=$1
+#declare -r files=$(find $folder/* -type f -printf "%f\n") # Making an array of files
 
 blast="blastn"
 db="/1/scratch/blastdb/nt"
@@ -208,6 +208,7 @@ done
 ##################
 ### The Workup ###
 ##################
+log | tee $log
 
 # We need to determine if the file is gzipped
 echo "Decompressing the files"
@@ -237,6 +238,7 @@ fi
 ### Now to run the Blast commands ###
 #####################################
 
+rm -rf ${out} # Delete the folder if it already exists
 if [[ $subsample != 0 ]]; then
 	for final in ${out}Subsample/*; do
 		blastCMD $final	
