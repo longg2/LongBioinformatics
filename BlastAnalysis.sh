@@ -47,14 +47,15 @@ blastCMD() { # The Meat and Potatoes of the script
 	local in=$1
 	local sample=$(basename $in .fasta)
 	mkdir -p ${out}
-	
+		
 	echo "Running $blast for $sample"
 	if [ "$blast" == "blastn" ]; then
-		blastn -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores -perc_identity $Pident -task blastn > ${out}/$sample.tab &
+		blastn -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores -perc_identity $Pident -task blastn > ${out}/$sample.tab 2>> BlastNWarnings.log  &
 		pid=$! # Getting the PID of the blast run
 		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
 
 		local nblines=$(wc -l $in | cut -f 1 -d " ")
+		echo "Waiting...."
 		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
 			if [ -s ${out}/$sample.tab ]; then
 				local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
@@ -62,7 +63,6 @@ blastCMD() { # The Meat and Potatoes of the script
 				ProgressBar $curline $nblines
 				sleep 10
 			else
-				echo "Waiting...."
 				sleep 60 # Want to give it time to think
 			fi
 		done
@@ -71,44 +71,44 @@ blastCMD() { # The Meat and Potatoes of the script
 
 
 	elif [ "$blast" == "blastp" ]; then
-		blastp -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores > ${out}/$sample.tab &
-			pid=$! # Getting the PID of the blast run
-			trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
-	
-			local nblines=$(wc -l $in | cut -f 1 -d " ")
-			while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
-				if [ -s ${out}/$sample.tab ]; then
-					local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
-					local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
-					ProgressBar $curline $nblines
-					sleep 10
-				else
-					echo "Waiting...."
-					sleep 60 # Want to give it time to think
-				fi
-			done
-			
-			printf "\n$in is Complete\n"
-	elif [ "$blast" == "blastx" ]; then
-		blastx -db $db -query_gencode 11 -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores  > ${out}/${sample}.tab &
+		blastp -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores > ${out}/$sample.tab 2>> BlastPWarnings.log &
+		pid=$! # Getting the PID of the blast run
+		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
 
-			pid=$! # Getting the PID of the blast run
-			trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
-	
-			local nblines=$(wc -l $in | cut -f 1 -d " ")
-			while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
-				if [ -s ${out}/$sample.tab ]; then
-					local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
-					local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
-					ProgressBar $curline $nblines
-					sleep 10
-				else
-					echo "Waiting...."
-					sleep 60 # Want to give it time to think
-				fi
-			done
-			
-			printf "\n$in is Complete\n"
+		local nblines=$(wc -l $in | cut -f 1 -d " ")
+		echo "Waiting...."
+		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
+			if [ -s ${out}/$sample.tab ]; then
+				local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
+				local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
+				ProgressBar $curline $nblines
+				sleep 10
+			else
+				sleep 60 # Want to give it time to think
+			fi
+		done
+		
+		printf "\n$in is Complete\n"
+	elif [ "$blast" == "blastx" ]; then
+		blastx -db $db -query_gencode 11 -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores  > ${out}/${sample}.tab 2>> BlastXWarnings.log &
+
+		pid=$! # Getting the PID of the blast run
+		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
+
+		local nblines=$(wc -l $in | cut -f 1 -d " ")
+		echo "Waiting...."
+		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
+			if [ -s ${out}/$sample.tab ]; then
+				local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
+				local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
+				ProgressBar $curline $nblines
+				sleep 10
+			else
+				sleep 60 # Want to give it time to think
+			fi
+		done
+		
+		printf "\n$in is Complete\n"
 	else
 		echo "Please choose either blastn or blastp"
 		return 1
