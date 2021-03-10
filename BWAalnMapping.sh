@@ -91,27 +91,28 @@ FileIdentification(){ # Extract Files from an array using results from another a
 DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	#echo "$array"
-	local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%%_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
+	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%%_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
+	local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%_*});echo ${tmp/%.f*}; done) # Getting only the sample names
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
 
 }
 
-FastaorFastq(){ # Figuring out if fasta or fastq
-	local tmp=$1
-	if file $tmp | grep -q "compressed"; then 
-		local firstChar=$(zcat $1 | head -c 1)
-	else 
-		local firstChar=$(cat $1 | head -c 1)
-	fi
-
-	if [ "$firstChar" == "@" ];then
-		exit 0
-	elif [ "$firstChar" == ">" ];then
-		exit 1
-	else
-		exit 2
-	fi
-}
+#FastaorFastq(){ # Figuring out if fasta or fastq
+#	local tmp=$1
+#	if file $tmp | grep -q "compressed"; then 
+#		local firstChar=$(zcat $1 | head -c 1)
+#	else 
+#		local firstChar=$(cat $1 | head -c 1)
+#	fi
+#
+#	if [ "$firstChar" == "@" ];then
+#		exit 0
+#	elif [ "$firstChar" == ">" ];then
+#		exit 1
+#	else
+#		exit 2
+#	fi
+#}
 
 FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
 	# Unsetting variables in case they're already defined from a previous run 
@@ -160,10 +161,10 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $merged -t $ncores 2>/dev/null > tmp.sai
 	
 		bwa samse $ref tmp.sai $merged 2>/dev/null |\
-			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam|\
-			samtools sort -	> tmpM.bam
+			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam 2>/dev/null |\
+			samtools sort -	> tmpM.bam 2>/dev/null 
 	
-		samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
+		samtools fastq tmp.bam 2>/dev/null| gzip > ${out}UnmappedReads/${sample}.fastq.gz
 	fi
 	
 	if [ "$r1" != "NA" ]; then # If I found a merged file
@@ -172,20 +173,20 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $r2 -t $ncores 2>/dev/null > tmp2.sai # Second Index
 	
 		bwa sampe $ref tmp1.sai tmp2.sai $r1 $r2 2>/dev/null |\
-			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam |\
-		       	samtools sort - > tmpP.bam
+			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam 2>/dev/null|\
+		       	samtools sort - > tmpP.bam 2>/dev/null
 		
-		samtools fastq -c 6 tmp.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null
+		samtools fastq -c 6 tmp.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 2>/dev/null
 	
 	fi
 	
 	# Merging the files if needed.  Otherwise, we can ignore and simply mv it
 	#if [ -v merged ] && [ -v r1 ]; then
 	if [ "$merged" != "NA" ] && [ "r1" != "NA" ]; then
-		samtools merge -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam
+		samtools merge -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam 2>/dev/null
 	elif [ "$merged" != "NA" ] && [ "r1" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
-		mv tmpM.bam ${out}MappedReads/$sample.bam
+		mv tmpM.bam ${out}MappedReads/$sample.bam 
 	else
 		mv tmpP.bam ${out}MappedReads/$sample.bam
 	fi
@@ -281,6 +282,7 @@ mkdir -p ${out}UnmappedReads
 [ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
+#echo ${samples[@]}
 
 # The actual loop
 total=${#samples[@]}
@@ -293,7 +295,7 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	FileExtraction
 
 #	printf "$sample\n"
-#	printf "MERGED:$merged\nR1:$r1\nR2:$r2\n" | tee -a $log # Debugging only
+#	printf "\nMERGED:$merged\nR1:$r1\nR2:$r2\n" | tee -a $log # Debugging only
 
 	# This here is to prevent odd scenarios where I only have r1 or Merged + r2
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
@@ -318,8 +320,10 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 
 done
 
+printf "\nMapping Complete\n"
+
 # Only if requested
 if [ "${dedup}" == "TRUE" ]; then
 	echo "Deduplication Requested"
-       parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
+       parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {}" ::: ${out}MappedReads/*bam # Removes Duplicates
 fi
