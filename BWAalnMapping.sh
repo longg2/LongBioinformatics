@@ -92,6 +92,7 @@ DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	#echo "$array"
 	local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%_*});echo ${tmp/%.f*}; done) # Getting only the sample names
+	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%%_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
 
 }

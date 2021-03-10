@@ -47,7 +47,7 @@ blastCMD() { # The Meat and Potatoes of the script
 	local in=$1
 	local sample=$(basename $in .fasta)
 	mkdir -p ${out}
-		
+
 	echo "Running $blast for $sample"
 	if [ "$blast" == "blastn" ]; then
 		blastn -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores -perc_identity $Pident -task blastn > ${out}/$sample.tab 2>> BlastNWarnings.log  &
