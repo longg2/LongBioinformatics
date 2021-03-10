@@ -91,27 +91,27 @@ FileIdentification(){ # Extract Files from an array using results from another a
 DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	#echo "$array"
-	local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%%_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
+	local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%_*});echo ${tmp/%.f*}; done) # Getting only the sample names
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
 
 }
 
-FastaorFastq(){ # Figuring out if fasta or fastq
-	local tmp=$1
-	if file $tmp | grep -q "compressed"; then 
-		local firstChar=$(zcat $1 | head -c 1)
-	else 
-		local firstChar=$(cat $1 | head -c 1)
-	fi
-
-	if [ "$firstChar" == "@" ];then
-		exit 0
-	elif [ "$firstChar" == ">" ];then
-		exit 1
-	else
-		exit 2
-	fi
-}
+#FastaorFastq(){ # Figuring out if fasta or fastq
+#	local tmp=$1
+#	if file $tmp | grep -q "compressed"; then 
+#		local firstChar=$(zcat $1 | head -c 1)
+#	else 
+#		local firstChar=$(cat $1 | head -c 1)
+#	fi
+#
+#	if [ "$firstChar" == "@" ];then
+#		exit 0
+#	elif [ "$firstChar" == ">" ];then
+#		exit 1
+#	else
+#		exit 2
+#	fi
+#}
 
 FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
 	# Unsetting variables in case they're already defined from a previous run 
@@ -281,6 +281,7 @@ mkdir -p ${out}UnmappedReads
 [ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
+#echo ${samples[@]}
 
 # The actual loop
 total=${#samples[@]}
@@ -293,7 +294,7 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	FileExtraction
 
 #	printf "$sample\n"
-#	printf "MERGED:$merged\nR1:$r1\nR2:$r2\n" | tee -a $log # Debugging only
+#	printf "\nMERGED:$merged\nR1:$r1\nR2:$r2\n" | tee -a $log # Debugging only
 
 	# This here is to prevent odd scenarios where I only have r1 or Merged + r2
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
