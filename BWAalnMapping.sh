@@ -158,41 +158,44 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	if [ "$merged" != "NA" ]; then # If I found a merged file
 	#if [ -v merged ]; then # If I found a merged file
-		bwa aln -o 2 -n 0.01 -l 16500 $ref $merged -t $ncores 2>/dev/null > tmp.sai
+		bwa aln -o 2 -n 0.01 -l 16500 $ref $merged -t $ncores > tmp.sai
 	
-		bwa samse $ref tmp.sai $merged 2>/dev/null |\
-			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam 2>/dev/null |\
-			samtools sort -	> tmpM.bam 2>/dev/null 
+		bwa samse $ref tmp.sai $merged  |\
+			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam  |\
+			samtools sort -	> tmpM.bam  
 	
-		samtools fastq tmp.bam 2>/dev/null| gzip > ${out}UnmappedReads/${sample}.fastq.gz
+		samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
 	fi
 	
 	if [ "$r1" != "NA" ]; then # If I found a merged file
 	#if [ -v r1 ]; then # If we have paired reads
-		bwa aln -o 2 -n 0.01 -l 16500 $ref $r1 -t $ncores 2>/dev/null > tmp1.sai # First index
-		bwa aln -o 2 -n 0.01 -l 16500 $ref $r2 -t $ncores 2>/dev/null > tmp2.sai # Second Index
+		bwa aln -o 2 -n 0.01 -l 16500 $ref $r1 -t $ncores  > tmp1.sai # First index
+		bwa aln -o 2 -n 0.01 -l 16500 $ref $r2 -t $ncores  > tmp2.sai # Second Index
 	
-		bwa sampe $ref tmp1.sai tmp2.sai $r1 $r2 2>/dev/null |\
-			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam 2>/dev/null|\
-		       	samtools sort - > tmpP.bam 2>/dev/null
+		bwa sampe $ref tmp1.sai tmp2.sai $r1 $r2  |\
+			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam |\
+		       	samtools sort - > tmpP.bam 
 		
-		samtools fastq -c 6 tmp.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 2>/dev/null
+		samtools fastq -c 6 tmp.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 
 	
 	fi
 	
 	# Merging the files if needed.  Otherwise, we can ignore and simply mv it
 	#if [ -v merged ] && [ -v r1 ]; then
 	if [ "$merged" != "NA" ] && [ "r1" != "NA" ]; then
-		samtools merge -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam 2>/dev/null
+		samtools merge -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam
+		rm tmpP.bam tmpM.bam  
 	elif [ "$merged" != "NA" ] && [ "r1" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 		mv tmpM.bam ${out}MappedReads/$sample.bam 
+		rm tmpM.bam  
 	else
 		mv tmpP.bam ${out}MappedReads/$sample.bam
+		rm tmpP.bam  
 	fi
 
 	# Deleting temporary files
-	rm tmpP.bam tmpM.bam tmp.bam tmp*.sai
+	rm tmp.bam tmp*.sai
 
 }
 
@@ -279,6 +282,7 @@ log | tee $log # The inital log file
 # The Folders
 mkdir -p ${out}MappedReads
 mkdir -p ${out}UnmappedReads 
+mkdir -p ${out}BWALog
 [ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
@@ -301,15 +305,15 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
 	#if [ -v $merged ] && [ -v $r1 ] && [ -v $r2 ]; then
 		#printf "$sample will run the whole shebang\n--------\n"
-		alnMapping
+		alnMapping 2> ${out}BWALog/$sample.log
 	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v $merged ] && [ -z ${r1+x} ] && [ -z ${r2+x} ]; then
 		#printf "$sample will run only the merged file\n--------\n"
-		alnMapping
+		alnMapping 2> ${out}BWALog/$sample.log
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
 	#elif [ -z ${merged+x} ] && [ -v $r1 ] && [ -v $r2 ]; then
 		#printf "$sample will only run the paired file\n--------\n"
-		alnMapping
+		alnMapping 2> ${out}BWALog/$sample.log
 	else
 		printf "$sample has an odd combination.  It has been skipped\n" >> $log
 	fi
