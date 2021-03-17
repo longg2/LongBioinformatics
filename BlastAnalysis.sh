@@ -116,22 +116,39 @@ blastCMD() { # The Meat and Potatoes of the script
 
 	return 0
 }
+LCA() {	# This will perform the LCA analysis based on the Blast Results
+	
+	# Variables and folders
+	local in=$1 # The sample name
+	mkdir -p ${out}LCA
+
+	# The actual work
+	local counts=$(cat $in | cut -f 1,13 |\
+		sort --compress-program gzip |\ # Can be memory inefficient at times 
+	       	uniq -c |\
+	       	sed -e "s/^ *//g" -e "s/ /\t/g" |\ # Preventing errors
+		sort -k3)# Getting the Counts
+
+	local blast=$(cut -f 3 $counts | uniq | taxonkit lineage | taxonkit reformat -t -R "NA" | cut -f 1,4)
+	join -1 3 -2 1 $counts $blast | cut -f 2- -d " " | sed -e "s/ /\t/g" -e "s/;/\t/g" | sort -k 2 > ${out}LCA/$in.tab
+}
 usage() { printf "BlastN/P Wrapper Script V0.9
 	Outputs tab deliminated BlastN/P report file in the form of std staxid.  Taxa counts
 	for each step are also outputted.  Need seqkit for subsampling.	String Deduplication occurs.
-	TBD: Remove Seqkit Completely, integration of LCA script with BlastN
+	LCA Script requires taxonkit <https://github.com/shenwei356/taxonkit>
+	TBD: Remove Seqkit Completely
         -i\tInput Folder
 	-o\tOutput Folder (Default = BlastOut)
 	-b\tblastn, blastp, or blastx? (Default = blastn)
 	-d\tBlast database (Default = /1/scratch/blastdb/nt)
 	-e\tMaximum Evalue (Default = 1e-5)
 	-k\tRead Length (Default = 30)
-	-l\tLog File
 	-p\tPercent Identity (Default = 90)
 	-s\tReads to Subsample (Default = 0)
+	-t\tLCA Analysis (Default = FALSE)
 	-n\tNumber of CPU Threads to be used (Default = 8)
+	-l\tLog File Name (Default is date+%Y%m%d)
         -h\tShow this help message and exit\n" 1>&2; exit 1; }
-
 log() {	printf "Blast settings for $(date):
 	Log File:\t${log}
 	Input folder:\t${folder}
@@ -144,11 +161,13 @@ log() {	printf "Blast settings for $(date):
 	Percent Identity:\t${Pident}
 	Subsampled Reads:\t${subsample}
 	Min Read Length:\t${len}	
+	LCA:\t${lca}
 	CPU Threads:\t${ncores}\n"; exit 0;
 }
 
 export -f FastaorFastq # important as I'm running this in parallel
 export -f GzipDetection # important as I'm running this in parallel
+export -f LCA # important as I'm running this in parallel
 #export -f ProgressBar
 
 # Preset Variables
@@ -163,9 +182,10 @@ declare -i subsample=0
 declare -i ncores=8
 eval="1e-5"
 log="$(date +'%Y%m%d').log"
+lca="FALSE"
 out="BlastOut"
 
-while getopts "i:e:d:n:o:b:p:l:s:h" arg; do
+while getopts "i:e:d:n:o:b:p:l:s:ht" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}
@@ -197,6 +217,9 @@ while getopts "i:e:d:n:o:b:p:l:s:h" arg; do
 			;;
 		k)
                         declare -i len=${OPTARG}
+			;;
+		t)
+                        lca="TRUE"
 			;;
                 h | *)
                         usage
@@ -248,3 +271,14 @@ else
 		blastCMD $final	
 	done
 fi
+
+#############################
+### LCA Script if desired ###
+#############################
+
+if [[ $lca == "TRUE" ]]; then
+	echo "Determining the LCA for each hit"
+	parallel -j $ncores --bar "LCA {}" ::: ${out}/*
+fi
+
+echo "Blast is Finished!"
