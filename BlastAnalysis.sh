@@ -147,7 +147,7 @@ usage() { printf "BlastN/P Wrapper Script V0.9
 	-s\tReads to Subsample (Default = 0)
 	-t\tLCA Analysis (Default = FALSE)
 	-n\tNumber of CPU Threads to be used (Default = 8)
-	-l\tLog File Name (Default is date+%Y%m%d)
+	-l\tLog File Name (Default is date+Ymd)
         -h\tShow this help message and exit\n" 1>&2; exit 1; }
 log() {	printf "Blast settings for $(date):
 	Log File:\t${log}

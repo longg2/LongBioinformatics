@@ -186,17 +186,18 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	
 	fi
 	
-	echo "###############\nMerged:$(samtools view -c tmpM.bam)\n##############"
-	
 	# Merging the files if needed.  Otherwise, we can ignore and simply mv it
 	#if [ -v merged ] && [ -v r1 ]; then
-	if [ "$merged" != "NA" ] && [ "r1" != "NA" ]; then
+	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ]; then
+		#echo "MERGED and PAIRED"
 		samtools merge -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam
 		rm tmpP.bam tmpM.bam  
-	elif [ "$merged" != "NA" ] && [ "r1" == "NA" ]; then
+	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
+		#echo "MERGED"
 		mv tmpM.bam ${out}MappedReads/$sample.bam 
 	else
+		#echo "PAIRED"
 		mv tmpP.bam ${out}MappedReads/$sample.bam
 	fi
 
@@ -292,8 +293,7 @@ mkdir -p ${out}BWALogs
 [ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
-echo ${samples[@]}
-exit 0
+#echo ${samples[@]}
 
 # The actual loop
 #echo "${samples[@]}"
@@ -305,8 +305,8 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	FileIdentification $sample # Extracting the file names.  Will be saved as $sampleFiles
 	FileExtraction
 
-	printf "\n$sample"
-	printf "\nMERGED:$merged\nR1:$r1\nR2:$r2\n" #| tee -a $log # Debugging only
+	#printf "\n$sample"
+	#printf "\nMERGED:$merged\nR1:$r1\nR2:$r2\n" #| tee -a $log # Debugging only
 
 	# This here is to prevent odd scenarios where I only have r1 or Merged + r2
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
