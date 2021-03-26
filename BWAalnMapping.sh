@@ -92,7 +92,10 @@ DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	#echo "$array"
 	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%%_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
-	local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%_*});echo ${tmp/%.f*}; done) # Getting only the sample names
+	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%_*});echo ${tmp/%.f*}; done) # Getting only the sample names
+
+	#local sampleNames=$(for name in ${array[@]}; do tmp="$(sed -e 's/_r1|_r2_|_Merged//' <(echo $tmp) )";echo ${tmp/%.f*}; done) # Getting only the sample names
+	local sampleNames=$(for tmp in ${array[@]}; do tmp=$(echo ${tmp/_r1}); tmp=$(echo ${tmp/_r2}); tmp=$(echo ${tmp/_merged}); tmp=$(echo ${tmp/_Merged});echo ${tmp/%.f*}; done) # Getting only the sample tmps
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
 
 }
@@ -160,8 +163,8 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	#if [ -v merged ]; then # If I found a merged file
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $merged -t $ncores > tmp.sai
 	
-		bwa samse $ref tmp.sai $merged  |\
-			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam  |\
+		bwa samse $ref tmp.sai $merged |\
+			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam |\
 			samtools sort -	> tmpM.bam  
 	
 		samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
@@ -180,6 +183,8 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	
 	fi
 	
+	echo "###############\nMerged:$(samtools view -c tmpM.bam)\n##############"
+	
 	# Merging the files if needed.  Otherwise, we can ignore and simply mv it
 	#if [ -v merged ] && [ -v r1 ]; then
 	if [ "$merged" != "NA" ] && [ "r1" != "NA" ]; then
@@ -188,10 +193,8 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	elif [ "$merged" != "NA" ] && [ "r1" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 		mv tmpM.bam ${out}MappedReads/$sample.bam 
-		rm tmpM.bam  
 	else
 		mv tmpP.bam ${out}MappedReads/$sample.bam
-		rm tmpP.bam  
 	fi
 
 	# Deleting temporary files
@@ -282,38 +285,38 @@ log | tee $log # The inital log file
 # The Folders
 mkdir -p ${out}MappedReads
 mkdir -p ${out}UnmappedReads 
-mkdir -p ${out}BWALog
+mkdir -p ${out}BWALogs
 [ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 #echo ${samples[@]}
 
 # The actual loop
+#echo "${samples[@]}"
 total=${#samples[@]}
 count=0
 
+ProgressBar $count $total
 for sample in ${samples[@]}; do # Iterating over an array of Samples
-	ProgressBar $count $total
-
 	FileIdentification $sample # Extracting the file names.  Will be saved as $sampleFiles
 	FileExtraction
 
-#	printf "$sample\n"
-#	printf "\nMERGED:$merged\nR1:$r1\nR2:$r2\n" | tee -a $log # Debugging only
+	printf "\n$sample"
+	printf "\nMERGED:$merged\nR1:$r1\nR2:$r2\n" #| tee -a $log # Debugging only
 
 	# This here is to prevent odd scenarios where I only have r1 or Merged + r2
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
 	#if [ -v $merged ] && [ -v $r1 ] && [ -v $r2 ]; then
 		#printf "$sample will run the whole shebang\n--------\n"
-		alnMapping 2> ${out}BWALog/$sample.log
+		alnMapping 2> ${out}BWALogs/$sample.log
 	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v $merged ] && [ -z ${r1+x} ] && [ -z ${r2+x} ]; then
 		#printf "$sample will run only the merged file\n--------\n"
-		alnMapping 2> ${out}BWALog/$sample.log
+		alnMapping 2> ${out}BWALogs/$sample.log
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
 	#elif [ -z ${merged+x} ] && [ -v $r1 ] && [ -v $r2 ]; then
 		#printf "$sample will only run the paired file\n--------\n"
-		alnMapping 2> ${out}BWALog/$sample.log
+		alnMapping 2> ${out}BWALogs/$sample.log
 	else
 		printf "$sample has an odd combination.  It has been skipped\n" >> $log
 	fi
@@ -321,7 +324,7 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	# A simple counter
 	#printf "$sample has been filtered ($count/$total)\n--------\n"
 	count=$(echo "$count + 1" | bc)
-
+	ProgressBar $count $total
 done
 
 printf "\nMapping Complete\n"

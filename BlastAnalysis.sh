@@ -278,7 +278,9 @@ fi
 
 if [[ $lca == "TRUE" ]]; then
 	echo "Determining the LCA for each hit"
-	parallel -j $ncores --bar "LCA {}" ::: ${out}/*
+	# Because taxonkit defaults to 4 cores, we don't want to accidentally swamp the machines
+	let taxonKitcores=$ncores/8 # 8 Because I'm using two instances of taxonkit per script
+	parallel -j $taxonKitcores --bar "LCA {}" ::: ${out}/*
 fi
 
 echo "Blast is Finished!"
