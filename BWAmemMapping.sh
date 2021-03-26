@@ -91,8 +91,11 @@ DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	#echo "$array"
 	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%%_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
-	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%_*});echo ${tmp/%.f*}; done) # Getting only the sample names
-	local sampleNames=$(for tmp in ${array[@]}; do tmp=$(echo ${tmp/_r1}); tmp=$(echo ${tmp/_r2}); tmp=$(echo ${tmp/_merged});echo ${tmp/%.f*}; done) # Getting only the sample tmps
+	local sampleNames=$(for name in ${array[@]}; do
+		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e "s/_merged.*//I")";
+		echo $tmp;
+       	done) # Getting only the sample names
+	#local sampleNames=$(for tmp in ${array[@]}; do tmp=$(echo ${tmp/_r1}); tmp=$(echo ${tmp/_r2}); tmp=$(echo ${tmp/_merged});echo ${tmp/%.f*}; done) # Getting only the sample tmps
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
 
 }

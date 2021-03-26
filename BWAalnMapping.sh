@@ -94,8 +94,11 @@ DeduplicateArray(){ # Deduplicating the sample names
 	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%%_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
 	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%_*});echo ${tmp/%.f*}; done) # Getting only the sample names
 
-	#local sampleNames=$(for name in ${array[@]}; do tmp="$(sed -e 's/_r1|_r2_|_Merged//' <(echo $tmp) )";echo ${tmp/%.f*}; done) # Getting only the sample names
-	local sampleNames=$(for tmp in ${array[@]}; do tmp=$(echo ${tmp/_r1}); tmp=$(echo ${tmp/_r2}); tmp=$(echo ${tmp/_merged}); tmp=$(echo ${tmp/_Merged});echo ${tmp/%.f*}; done) # Getting only the sample tmps
+	local sampleNames=$(for name in ${array[@]}; do
+		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e "s/_merged.*//I")";
+		echo $tmp;
+       	done) # Getting only the sample names
+	#local sampleNames=$(for tmp in ${array[@]}; do tmp=$(echo ${tmp/_r1}); tmp=$(echo ${tmp/_r2}); tmp=$(echo ${tmp/_merged}); tmp=$(echo ${tmp/_Merged});echo ${tmp/%.f*}; done) # Getting only the sample tmps
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
 
 }
@@ -289,7 +292,8 @@ mkdir -p ${out}BWALogs
 [ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
-#echo ${samples[@]}
+echo ${samples[@]}
+exit 0
 
 # The actual loop
 #echo "${samples[@]}"
