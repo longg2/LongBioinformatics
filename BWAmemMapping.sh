@@ -92,7 +92,7 @@ DeduplicateArray(){ # Deduplicating the sample names
 	#echo "$array"
 	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%%_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
 	local sampleNames=$(for name in ${array[@]}; do
-		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e "s/_merged.*//I")";
+		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e "s/_merged.*//I" -e "s/.fa.*//I")";
 		echo $tmp;
        	done) # Getting only the sample names
 	#local sampleNames=$(for tmp in ${array[@]}; do tmp=$(echo ${tmp/_r1}); tmp=$(echo ${tmp/_r2}); tmp=$(echo ${tmp/_merged});echo ${tmp/%.f*}; done) # Getting only the sample tmps
@@ -310,7 +310,7 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 		#printf "$sample will only run the paired file\n--------\n"
 		memMapping 2> ${out}BWALogs/$sample.log
 	else
-		printf "$sample has an odd combination.  It has been skipped\n" >> $log
+		printf "$sample has an odd combination.  It has been skipped\n"
 	fi
 
 	# A simple counter
