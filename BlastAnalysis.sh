@@ -162,7 +162,8 @@ log() {	printf "Blast settings for $(date):
 	Subsampled Reads:\t${subsample}
 	Min Read Length:\t${len}	
 	LCA:\t${lca}
-	CPU Threads:\t${ncores}\n"; exit 0;
+	CPU Threads:\t${ncores}
+	-------------------------------------\n"; exit 0;
 }
 
 export -f FastaorFastq # important as I'm running this in parallel
