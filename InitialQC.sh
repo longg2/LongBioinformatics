@@ -1,11 +1,12 @@
 #! /usr/bin/env sh
 # These are the functions that actually do the work.  Mean to make parallelization easier to do
-FileIdentification(){ # Extract Files from an array using results from another array
+FileIdentificationInFunction(){ # Extract Files from an array using results from another array
 	local sample=$1 # Basename of the file
-	local arrayFiles=$files
+	local location=$2
 
 	# Finding the indices which have the same samplename
-	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
+	sampleFiles=(find $location -name ${sample} -type f | basename)
+	#sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
 }
 
 FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
@@ -70,7 +71,7 @@ Trimming(){ # Performing the trimming
 }
 
 FastpWrapper(){ # Convenient Wrapper for parallelization
-	FileIdentification $1
+	FileIdentificationInFunction $1 $folder
 	FileExtraction $folder
 	Trimming
 }
@@ -96,7 +97,7 @@ FastpWrapper(){ # Convenient Wrapper for parallelization
 #	fi
 #}
 
-export -f FileIdentification
+export -f FileIdentificationInFunction
 export -f FileExtraction
 export -f Trimming
 export -f FastpWrapper
@@ -117,7 +118,8 @@ usage() { printf 'Modern QC Script V1
 	This is a minimal script.  All it will do is trim, merge,
 	and Pool the reads.  Assumes you have fastp.
         -i\tThe folder that contains the Raw sequencing files
-	-n\tNumber of CPU Threads to be used
+	-o\tThe output prefix (Default: QC)
+	-n\tNumber of CPU Threads to be used (Default: 16)
 	-l\tLog File Name (Default: $date)
         -h\tShow this help message and exit\n' 1>&2; exit 1; }
 
@@ -146,7 +148,6 @@ while getopts "i:k:n:o:l:hs" arg; do
                         declare -r folder=${OPTARG}
 			declare -r files=$(find $folder/* -type f -printf "%f\n") # Making an array of files
 			export $folder
-			export $files
                         #echo "The raw sequencing files are located in $raw"
                         ;;
                 o)

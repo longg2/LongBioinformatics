@@ -1,4 +1,18 @@
+# TODO:
+# • Make it function focussed
+# • Parallelize as much as possible
+# • Automate GUNZIP and Sequence Dedup
+# • Bracken Option as well (CAN BE PARALLELIZED EASILY)
 # Functions that do the heavy lifting.  Will also allow me to parallelize to my hearts content
+FileIdentificationInFunction(){ # Since I can't export Functions, this here is a workaround using find
+	local sample=$1 # Basename of the file
+	local location=$2
+
+	# Finding the indices which have the same samplename
+	sampleFiles=(find $location -name ${sample} -type f | basename)
+	#sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
+}
+
 FileIdentification(){ # Extract Files from an array using results from another array
 	local sample=$1 # Basename of the file
 	local arrayFiles=$files
@@ -7,11 +21,25 @@ FileIdentification(){ # Extract Files from an array using results from another a
 	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
 }
 
-ParallelStringDeduplication(){
-	local sampleName=$1
-	local DuplicateFolder=$2 # What's my input?
+StringDeduplication(){ # Convenient Wrapper for parallelization
+	FileIdentification $1 $2
+	FileExtraction $2
+	
+	# Now for the actual deduplication
 
-	parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null" ::: ${out}FastaOnly/*
+	if [ "$merged" != "NA" ]; then # If I found a merged file
+		zcat $merged | perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq stdin -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}PrinseqLog/${sample}Merged.log 2> /dev/null | gzip > ${out}PooledLanes/${sample}_Merged.fastq.gz
+	fi
+
+	if [ "$r1" != "NA" ]; then # If I found a paired file
+		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq <(zcat $r1) -fastq2 <(zcat $r2) -out_bad null -out_good TMP/${sample}_r -min_len $len -derep 14 -log ${out}PrinseqLog/${sample}Paired.log 2> /dev/null
+
+	# Because of how prinseq is coded, I'll need to compress separately	
+		gzip -c ${sample}_r1.fastq > ${out}PooledLanes/${sample}_r1.fastq.gz
+		gzip -c ${sample}_r2.fastq > ${out}PooledLanes/${sample}_r2.fastq.gz
+
+		rm -rf TMP/*
+	fi
 }
 
 FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
@@ -77,15 +105,14 @@ GzipDetection(){ # Need to ID Gzipped files and decompress if needed
 }
 
 export -f GzipDetection
-export -f FileIdentification
-
+export -f FileIdentificationInFunction
+export -f FileExtraction
 
 usage() { printf 'Kraken2 Wrapper Script V0.5
 	Will pipe Kraken2 to the correct folders and create Krona plots.
         -i\tWhere the sequences are
 	-o\tOutput Prefix
 	-d\tKraken2 Database
-	-s\tString Deduplication
         -n\tNumber of CPU Threads to be used
 	-l\tLog File Name
 	-k\tMinimun Fragment Length

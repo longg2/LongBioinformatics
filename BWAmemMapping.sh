@@ -325,5 +325,5 @@ printf "\nMapping Complete\n"
 # Only if requested
 if [ "${dedup}" == "TRUE" ]; then
 	echo "Deduplication Requested"
-       parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {}" ::: ${out}MappedReads/*bam # Removes Duplicates
+       parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
 fi
