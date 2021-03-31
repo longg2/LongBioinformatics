@@ -1,12 +1,62 @@
 #! /usr/bin/env sh
 # These are the functions that actually do the work.  Mean to make parallelization easier to do
-FileIdentificationInFunction(){ # Extract Files from an array using results from another array
+FileIdentification(){ # Extract Files from an array using results from another array
 	local sample=$1 # Basename of the file
-	local location=$2
+	local arrayFiles=$files
 
 	# Finding the indices which have the same samplename
-	sampleFiles=(find $location -name ${sample} -type f | basename)
-	#sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
+	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
+#	local numFiles=$(echo "$sampleFiles" | wc -l )
+#	#echo "$numFiles"
+#
+#	if [ $numFiles = 1 ]; then
+#		echo "$sample only has one file.  Assuming all Merged"
+#		sampleFiles=($( echo $sampleFiles | tr '\012' ' ' ))
+#		#FastaorFastq "$folder/$sampleFiles"	
+#		## What file is it?
+#		#if [ $? == "0" ]; then
+#		#	echo "It's a fastq file.  Proceed to mapping."
+#		#elif [ $? == "1" ]; then
+#		#	echo "It's a fasta file.  Won't be mapping it."
+#		#else
+#		#	echo "Unknown file.  Halting."
+#		#	exit 1
+#		#fi
+#
+#		# Need to test if it's fasta or fastq
+#	elif [ $numFiles = 2 ]; then
+#		echo "$sample has two files.  Assuming only Paired"
+#		sampleFiles=($( echo $sampleFiles | tr '\012' ' ' ))
+#
+#		#FastaorFastq "$folder/${sampleFiles[0]}"	
+#		## What file is it?
+#		#if [ $? == "0" ]; then
+#		#	echo "It's a fastq file.  Proceed to mapping."
+#		#elif [ $? == "1" ]; then
+#		#	echo "It's a fasta file.  Won't be mapping it."
+#		#else
+#		#	echo "Unknown file.  Halting."
+#		#	exit 1
+#		#fi
+#	elif [ $numFiles = 3 ]; then
+#		echo "$sample has three files.  Assuming both paired and merged reads"
+#		sampleFiles=($( echo $sampleFiles | tr '\012' ' ' ))
+#
+#		#echo "$folder/${sampleFiles[0]}"
+#		#FastaorFastq "$folder/${sampleFiles[0]}"
+#		## What file is it?
+#		#if [ $? == "0" ]; then
+#		#	echo "It's a fastq file.  Proceed to mapping."
+#		#elif [ $? == "1" ]; then
+#		#	echo "It's a fasta file.  Won't be mapping it."
+#		#else
+#		#	echo "Unknown file.  Halting."
+#		#	exit 1
+#		#fi
+#	else
+#		echo "$sample has more than three files.  Will be skipped."
+#	fi
+
 }
 
 FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
@@ -15,44 +65,47 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 	# unset r1
 	# unset r2
 
-	FolderInterest=$1
 	# This here is a fix that's needed if -v doesn't
 	merged="NA"
 	r1="NA"
 	r2="NA"
 
 	# Creating a hidden text file of file names
-	#printf '%s\n' "${sampleFiles[@]}" > .hiddenlist.list
+	printf '%s\n' "${sampleFiles[@]}" > .hiddenlist.list
 
 	# Identifying the files
-	if $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1"); then
+	if grep -P -i -q "r1" .hiddenlist.list; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
-	        r1="$FolderInterest/$fileName"
+	        r1="$folder/$fileName"
 	fi
 
-	if $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2"); then
+	if grep -P -i -q "r2" .hiddenlist.list; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2')
-	        r2="$FolderInterest/$fileName"
+	        r2="$folder/$fileName"
 	fi
 
 	# Two cases for the merged.  Want to control for shenanigans
-	if $(printf '%s\n' "${sampleFiles[@]}" | grep -q -i "$sample\.f.*") .hiddenlist.list; then
+	if grep -q -i "$sample\.f.*" .hiddenlist.list; then
 	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -v -q "_\.f*") ]; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -i "$sample\.f.*")
-	        merged="$FolderInterest/$fileName"
+	        merged="$folder/$fileName"
 	fi
 
-	if $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged"); then
+	if grep -P -i -q "merged" .hiddenlist.list; then
 	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged") ]; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
-	        merged="$FolderInterest/$fileName"
+	        merged="$folder/$fileName"
 	fi
 
-	#rm .hiddenlist.list
+	rm .hiddenlist.list
 }
 
 Trimming(){ # Performing the trimming
 	# Trimming
+	local r1=$1
+	local r2=$1
+	local sample=$3
+	local out=$4
         fastp -i $r1 -I $r2 --merge \
         --merged_out ${out}Trimmed/${sample}_merged.fastq.gz \
 	--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
@@ -67,7 +120,7 @@ Trimming(){ # Performing the trimming
         --json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
         --unpaired1 ${out}Trimmed/${sample}_u1.fastq.gz \
         --unpaired2 ${out}Trimmed/${sample}_u2.fastq.gz\
-        --${out}FailedQC ${out}FailedQC/${sample}_failed.fastq.gz;
+        --failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
 }
 
 FastpWrapper(){ # Convenient Wrapper for parallelization
@@ -97,10 +150,10 @@ FastpWrapper(){ # Convenient Wrapper for parallelization
 #	fi
 #}
 
-export -f FileIdentificationInFunction
-export -f FileExtraction
+#export -f FileIdentificationInFunction
+#export -f FileExtraction
 export -f Trimming
-export -f FastpWrapper
+#export -f FastpWrapper
 
 
 DeduplicateArray(){ # Deduplicating the sample names
@@ -121,25 +174,22 @@ usage() { printf 'Modern QC Script V1
 	-o\tThe output prefix (Default: QC)
 	-n\tNumber of CPU Threads to be used (Default: 16)
 	-l\tLog File Name (Default: $date)
+	-k\tMinimum Read Length (Default: 30)
         -h\tShow this help message and exit\n' 1>&2; exit 1; }
 
 # Creating a simple command to save the settings used.
 log() {	printf "Mapping settings for $(date):
 	Log File:\t${log}
-	Input folder:\t${raw}
-	Reference:\t${ref}
+	Input folder:\t${folder}
+	Output folder:\t${out}
 	CPU Threads:\t${ncores}
-	BWA Mode:\t${bwa}
-	Deduplication=\t${dedupMethod}
-	-------------------------------------
-	Min Quality:\t${qual}
-	Min Length:\t${len}\n"; exit 0;
+	-------------------------------------\n"; exit 0;
 }
 
 #Default Values
 out="QC"
 ncores=8
-len=30
+export len=30
 log="$(date +'%Y%m%d').log"
 
 while getopts "i:k:n:o:l:hs" arg; do
@@ -147,7 +197,7 @@ while getopts "i:k:n:o:l:hs" arg; do
                 i)
                         declare -r folder=${OPTARG}
 			declare -r files=$(find $folder/* -type f -printf "%f\n") # Making an array of files
-			export $folder
+			export "${folder}"
                         #echo "The raw sequencing files are located in $raw"
                         ;;
                 o)
@@ -178,6 +228,8 @@ logBWA="${log/%.*}BWA.log"
 log | tee $log
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
+#echo ${samples[@]}
+#exit 0
 ####################################
 ###Trimming the reads with leeHom###
 ####################################
@@ -188,7 +240,14 @@ echo "Trimming and Merging Reads"
 
 njobs=$(echo "scale=0;var1=$ncores/16;var1"|bc) # Will round down!!!
 
-parallel --bar -j $njobs "FastPWrapper {}" ::: "${samples[@]}"
+for sample in ${samples[@]}; do
+	FileIdentification $sample
+	FileExtraction
+	sem -j $njobs "Trimming $r1 $r2 $sample $out" > /dev/null 2> /dev/null
+	
+done
+
+#parallel --bar -j $njobs "FastPWrapper {}" ::: "${samples[@]}"
 
 ###################
 ###Pooling Lanes###
