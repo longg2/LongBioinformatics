@@ -6,57 +6,6 @@ FileIdentification(){ # Extract Files from an array using results from another a
 
 	# Finding the indices which have the same samplename
 	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
-#	local numFiles=$(echo "$sampleFiles" | wc -l )
-#	#echo "$numFiles"
-#
-#	if [ $numFiles = 1 ]; then
-#		echo "$sample only has one file.  Assuming all Merged"
-#		sampleFiles=($( echo $sampleFiles | tr '\012' ' ' ))
-#		#FastaorFastq "$folder/$sampleFiles"	
-#		## What file is it?
-#		#if [ $? == "0" ]; then
-#		#	echo "It's a fastq file.  Proceed to mapping."
-#		#elif [ $? == "1" ]; then
-#		#	echo "It's a fasta file.  Won't be mapping it."
-#		#else
-#		#	echo "Unknown file.  Halting."
-#		#	exit 1
-#		#fi
-#
-#		# Need to test if it's fasta or fastq
-#	elif [ $numFiles = 2 ]; then
-#		echo "$sample has two files.  Assuming only Paired"
-#		sampleFiles=($( echo $sampleFiles | tr '\012' ' ' ))
-#
-#		#FastaorFastq "$folder/${sampleFiles[0]}"	
-#		## What file is it?
-#		#if [ $? == "0" ]; then
-#		#	echo "It's a fastq file.  Proceed to mapping."
-#		#elif [ $? == "1" ]; then
-#		#	echo "It's a fasta file.  Won't be mapping it."
-#		#else
-#		#	echo "Unknown file.  Halting."
-#		#	exit 1
-#		#fi
-#	elif [ $numFiles = 3 ]; then
-#		echo "$sample has three files.  Assuming both paired and merged reads"
-#		sampleFiles=($( echo $sampleFiles | tr '\012' ' ' ))
-#
-#		#echo "$folder/${sampleFiles[0]}"
-#		#FastaorFastq "$folder/${sampleFiles[0]}"
-#		## What file is it?
-#		#if [ $? == "0" ]; then
-#		#	echo "It's a fastq file.  Proceed to mapping."
-#		#elif [ $? == "1" ]; then
-#		#	echo "It's a fasta file.  Won't be mapping it."
-#		#else
-#		#	echo "Unknown file.  Halting."
-#		#	exit 1
-#		#fi
-#	else
-#		echo "$sample has more than three files.  Will be skipped."
-#	fi
-
 }
 
 FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
