@@ -116,22 +116,21 @@ blastCMD() { # The Meat and Potatoes of the script
 
 	return 0
 }
-LCA() {	# This will perform the LCA analysis based on the Blast Results
-	
-	# Variables and folders
-	local in=$1 # The sample name
-	mkdir -p ${out}LCA
-
-	# The actual work
-	local counts=$(cat $in | cut -f 1,13 |\
-		sort --compress-program gzip |\ # Can be memory inefficient at times 
-	       	uniq -c |\
-	       	sed -e "s/^ *//g" -e "s/ /\t/g" |\ # Preventing errors
-		sort -k3)# Getting the Counts
-
-	local blast=$(cut -f 3 $counts | uniq | taxonkit lineage | taxonkit reformat -t -R "NA" | cut -f 1,4)
-	join -1 3 -2 1 $counts $blast | cut -f 2- -d " " | sed -e "s/ /\t/g" -e "s/;/\t/g" | sort -k 2 > ${out}LCA/$in.tab
-}
+#LCA() {	# This will perform the LCA analysis based on the Blast Results
+#	
+#	# Variables and folders
+#	local in=$1 # The sample name
+#	# The actual work
+#	echo "Getting the counts"
+#
+#	cut -f 1,13 $in | sort --compress-program gzip | uniq -c | sed -e "s/^ *//g" -e "s/ /\t/g" | sort -k3 | mapfile -t counts
+#	#mapfile -t counts < <(cut -f 1,13 $in | sort --compress-program gzip | uniq -c | sed -e "s/^ *//g" -e "s/ /\t/g" | sort -k3)
+#
+#	cut -f 3 <(printf "%s\n" "${counts[@]}") | uniq | taxonkit lineage | taxonkit reformat -t -R "NA" | cut -f 1,4 | mapfile -t blast
+#	#mapfile -t blast < <(cut -f 3 <(printf "%s\n" "${counts[@]}") | uniq | taxonkit lineage | taxonkit reformat -t -R "NA" | cut -f 1,4)
+#	#local blast=$(cut -f 3 <(echo ${counts[@]}) | uniq | taxonkit lineage | taxonkit reformat -t -R "NA" | cut -f 1,4)
+#	join -1 3 -2 1 <(printf "%s\n" "${counts[@]}") <(printf "%s\n" "${blast[@]}") | cut -f 2- -d " " | sed -e "s/ /\t/g" -e "s/;/\t/g" | sort -k 2 > ${out}LCA/$(basename $in)
+#}
 usage() { printf "BlastN/P Wrapper Script V0.9
 	Outputs tab deliminated BlastN/P report file in the form of std staxid.  Taxa counts
 	for each step are also outputted.  Need seqkit for subsampling.	String Deduplication occurs.
@@ -186,7 +185,7 @@ log="$(date +'%Y%m%d').log"
 lca="FALSE"
 out="BlastOut"
 
-while getopts "i:e:d:n:o:b:p:l:s:ht" arg; do
+while getopts "i:k:e:d:n:o:b:p:l:s:ht" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}
@@ -280,8 +279,9 @@ fi
 if [[ $lca == "TRUE" ]]; then
 	echo "Determining the LCA for each hit"
 	# Because taxonkit defaults to 4 cores, we don't want to accidentally swamp the machines
+	mkdir -p ${out}LCA
 	let taxonKitcores=$ncores/8 # 8 Because I'm using two instances of taxonkit per script
-	parallel -j $taxonKitcores --bar "LCA {}" ::: ${out}/*
+	parallel -j $taxonKitcores --bar "{}" ::: ${out}/*
 fi
 
 echo "Blast is Finished!"
