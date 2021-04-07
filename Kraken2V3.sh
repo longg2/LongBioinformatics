@@ -51,33 +51,32 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 	r2="NA"
 
 	# Creating a hidden text file of file names
-	printf '%s\n' "${sampleFiles[@]}" > .hiddenlist.list
+	printf '%s\n' "${sampleFiles[@]}" #> .hiddenlist.list
 
 	# Identifying the files
-	if grep -P -i -q "r1" .hiddenlist.list; then
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1"; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
 	        r1="$folder/$fileName"
 	fi
 
-	if grep -P -i -q "r2" .hiddenlist.list; then
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2"; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2')
 	        r2="$folder/$fileName"
 	fi
 
 	# Two cases for the merged.  Want to control for shenanigans
-	if grep -q -i "$sample\.f.*" .hiddenlist.list; then
+	if printf '%s\n' "${sampleFiles[@]}" | grep -q -i "$sample\.f.*"; then
 	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -v -q "_\.f*") ]; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -i "$sample\.f.*")
 	        merged="$folder/$fileName"
 	fi
 
-	if grep -P -i -q "merged" .hiddenlist.list; then
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged"; then
 	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged") ]; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
 	        merged="$folder/$fileName"
 	fi
 
-	rm .hiddenlist.list
 }
 DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
@@ -234,7 +233,7 @@ mkdir -p prinseqLog
 # Getting the Sample Names
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
- We need to determine if the file is gzipped
+# We need to determine if the file is gzipped
 echo "Decompressing the files"
 mkdir -p IntGzip
 parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
