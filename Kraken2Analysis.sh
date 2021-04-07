@@ -142,9 +142,9 @@ do
 
 		# This is affected by the option s
 		if [ $dedup = "TRUE" ];then
-			perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq WorkFolder/${sample}_r1.fastq -fastq2 WorkFolder/${sample}_r2.fastq -out_good FilteredData/${sample} -derep 14 -min_len $len -log prinseqLog/${sample}Paired.log# Need to dedup
+			perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq WorkFolder/${sample}_r1.fastq -fastq2 WorkFolder/${sample}_r2.fastq -out_good FilteredData/${sample} -derep 14 -min_len $len -log prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20 # Need to dedup
 		else
-			perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq WorkFolder/${sample}_r1.fastq -fastq2 WorkFolder/${sample}_r2.fastq -out_good FilteredData/${sample} -min_len $len -log prinseqLog/${sample}Paired.log# Need to dedup
+			perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq WorkFolder/${sample}_r1.fastq -fastq2 WorkFolder/${sample}_r2.fastq -out_good FilteredData/${sample} -min_len $len -log prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20 # Need to dedup
 		fi
 
 	else
@@ -163,14 +163,14 @@ do
 		echo "Paired Found"
 		kraken2 --db $db --threads $ncores --report ${outPrefix}Reports/${sample}Merged.tab \
 			--classified-out ${outPrefix}Class/${sample}Merged.fastq --unclassified-out ${outPrefix}Unclass/${sample}Merged.fastq \
-		       --use-names $merged --output ${outPrefix}Output/${sample}Merged.out
+		       --use-names $merged --output ${outPrefix}Output/${sample}Merged.out --confidence 0.1
 	fi
 	
 	if [ -f "$paired" ]; then # Are there PE files
 		echo "Paired Found"
 		kraken2 --db $db --threads $ncores --report ${outPrefix}Reports/${sample}Paired.tab \
 			--classified-out ${outPrefix}Class/${sample}Paired.fastq --unclassified-out ${outPrefix}Unclass/${sample}Paired.fastq \
-		       --use-names $paired --output ${outPrefix}Output/${sample}Paired.out
+		       --use-names $paired --output ${outPrefix}Output/${sample}Paired.out --confidence 0.1
 	fi
 done
 
