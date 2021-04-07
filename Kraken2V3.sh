@@ -112,13 +112,13 @@ KrakenAnalysis(){ # This here will do the heavy lifting for the script
 	if [ "$merged" != "NA" ]; then # If I found a merged file
 		kraken2 --db $db --threads $ncores --report ${out}Reports/${sample}Merged.tab \
 			--classified-out ${out}Class/${sample}Merged.fastq --unclassified-out ${out}Unclass/${sample}Merged.fastq \
-		       --use-names $merged --output ${out}Output/${sample}Merged.out
+		       --use-names $merged --output ${out}Output/${sample}Merged.out --confidence 0.1
 	fi
 	
 	if [ "$r1" != "NA" ]; then # If I found a merged file
 		kraken2 --db $db --threads $ncores --report ${out}Reports/${sample}Paired.tab \
 			--classified-out ${out}Class/${sample}Paired.fastq --unclassified-out ${out}Unclass/${sample}Paired.fastq \
-		       --use-names $r1 --output ${out}Output/${sample}Paired.out
+		       --use-names $r1 --output ${out}Output/${sample}Paired.out --confidence 0.1
 	fi
 		
 }
@@ -250,22 +250,22 @@ echo "String Deduplciation with prinseq"
 parallel -j $ncores --bar "StringDeduplication {} $folder" ::: "${samples[@]}"
 
 # Now for the Kraken Loop
-for sample in "${samples[@]}";
-do
-	KrakenAnalysis $sample ${out}StringDedup # This here will do both Paired and unpaired runs.  Can't parallelize it either so it's the rate limiting step as well
-done
-
-# Now to combine the reports and create the Krona Plot
-parallel --bar -j $ncores "combine_kreports.py -r ${out}Reports/{} --only-combined --no-header -o ${out}CombinedReports/{}.tab > /dev/null 2> /dev/null;
-			kreport2krona.py -r ${out}CombinedReports/{}.tab -o ${out}Krona/{}.txt" ::: "${samples[@]}"
-ktImportText -o ${outPrefix}Krona.html ${outPrefix}Krona/* # making the KronaPlot
-
-# If requested, we want to also pull out the taxa of interest
-if [ $taxa != "NULL" ];then
-	mkdir -p ${out}TaxaInterest
-	taxa2="$(echo $taxa | sed -e 's/,/ /g')"
-	export $taxa2
-
-	# Now to do the actual work
-	parallel --bar -j $ncores "TaxaInterest {} ${out}StringDedup" ::: "${samples[@]}"
-fi
+#for sample in "${samples[@]}";
+#do
+#	KrakenAnalysis $sample ${out}StringDedup # This here will do both Paired and unpaired runs.  Can't parallelize it either so it's the rate limiting step as well
+#done
+#
+## Now to combine the reports and create the Krona Plot
+#parallel --bar -j $ncores "combine_kreports.py -r ${out}Reports/{} --only-combined --no-header -o ${out}CombinedReports/{}.tab > /dev/null 2> /dev/null;
+#			kreport2krona.py -r ${out}CombinedReports/{}.tab -o ${out}Krona/{}.txt" ::: "${samples[@]}"
+#ktImportText -o ${outPrefix}Krona.html ${outPrefix}Krona/* # making the KronaPlot
+#
+## If requested, we want to also pull out the taxa of interest
+#if [ $taxa != "NULL" ];then
+#	mkdir -p ${out}TaxaInterest
+#	taxa2="$(echo $taxa | sed -e 's/,/ /g')"
+#	export $taxa2
+#
+#	# Now to do the actual work
+#	parallel --bar -j $ncores "TaxaInterest {} ${out}StringDedup" ::: "${samples[@]}"
+#fi
