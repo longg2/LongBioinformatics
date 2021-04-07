@@ -6,7 +6,7 @@ FileIdentificationInFunction(){ # Since I can't export Functions, this here is a
 	local location=$2
 
 	# Finding the indices which have the same samplename
-	sampleFiles=(find $location -name ${sample} -type f | basename)
+	sampleFiles=(find $location -name ${sample} -type f -exec basename {} \;)
 	#sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
 }
 
@@ -26,11 +26,11 @@ StringDeduplication(){ # Convenient Wrapper for parallelization
 	
 	# Now for the actual deduplication
 	if [ "$merged" != "NA" ]; then # If I found a merged file
-		zcat $merged | perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq stdin -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}PrinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 2> /dev/null | gzip > ${out}PooledLanes/${sample}_Merged.fastq.gz
+		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq $merged -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}PrinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 2> /dev/null | gzip > ${out}PooledLanes/${sample}_Merged.fastq.gz
 	fi
 
 	if [ "$r1" != "NA" ]; then # If I found a paired file
-		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq <(zcat $r1) -fastq2 <(zcat $r2) -out_bad null -out_good TMP/${sample}_r -min_len $len -derep 14 -log ${out}PrinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20 2> /dev/null
+		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample}_r -min_len $len -derep 14 -log ${out}PrinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20 2> /dev/null
 
 	# Because of how prinseq is coded, I'll need to compress separately	
 		gzip -c ${sample}_r1.fastq > ${out}PooledLanes/${sample}_r1.fastq.gz
@@ -105,6 +105,7 @@ KrakenAnalysis(){ # This here will do the heavy lifting for the script
 
 	local sample=$1 # Need to get the sample name
 	local folder=$2 # Here we'll get the StringDedup Folder
+	local ncores=$3 # How many cores will be used?
 	FileIdentificationInFunction $sample $folder
 	FileExtraction $folder
 
@@ -147,14 +148,12 @@ TaxaExtraction(){ # If requested, we need to get the reads which mapped against 
 usage() { printf 'Kraken2 Wrapper Script V0.5
 	Will pipe Kraken2 to the correct folders and create Krona plots.
         -i\tWhere the sequences are
-	-o\tOutput Prefix
+	-o\tOutput Prefix (Default = Kraken2)
 	-d\tKraken2 Database
-        -n\tNumber of CPU Threads to be used
+	-n\tNumber of CPU Threads to be used (Default = 8)
 	-l\tLog File Name
-	-k\tMinimun Fragment Length
-	-s\tString Deduplication? (Default = FALSE)
+	-k\tMinimum Fragment Length (Default = 30)
 	-t\tTaxa Being Extracted (Comma Separated list)? (Default = NONE)
-	-z\tAre the files gzipped? (Default = FALSE)
         -h\tShow this help message and exit\n' 1>&2; exit 1; }
 log() {	printf "Kraken settings for $(date):
 	Log File:\t${log}
@@ -179,7 +178,6 @@ export -f TaxaExtraction
 declare -i len=30
 log="$(date +'%Y%m%d').log"
 declare -i ncores=8
-export $ncores
 out="Kraken2"
 export $out
 taxa="NULL"
@@ -197,7 +195,6 @@ while getopts "i:d:n:o:l:t:k:h" arg; do
                         ;;
                 n)
                         declare -i ncores=${OPTARG}
-			export $ncores
                         #echo "Using $ncores threads"
                         ;;
 		o)
@@ -234,25 +231,26 @@ mkdir -p prinseqLog
 #mkdir -p WorkFolder
 #mkdir -p FilteredData
 
-
 # Getting the Sample Names
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
-# We need to determine if the file is gzipped
-#echo "Decompressing the files"
-#mkdir -p IntGzip
-#parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+ We need to determine if the file is gzipped
+echo "Decompressing the files"
+mkdir -p IntGzip
+parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup
 mkdir -p ${out}prinseqLog
 echo "String Deduplciation with prinseq"
-parallel -j $ncores --bar "StringDeduplication {} $folder" ::: "${samples[@]}"
+parallel -j $ncores --bar "StringDeduplication {} IntGzip" ::: "${samples[@]}"
+
+rm -rf IntGzip
 
 # Now for the Kraken Loop
 #for sample in "${samples[@]}";
 #do
-#	KrakenAnalysis $sample ${out}StringDedup # This here will do both Paired and unpaired runs.  Can't parallelize it either so it's the rate limiting step as well
+#	KrakenAnalysis $sample ${out}StringDedup $ncores # This here will do both Paired and unpaired runs.  Can't parallelize it either so it's the rate limiting step as well
 #done
 #
 ## Now to combine the reports and create the Krona Plot
