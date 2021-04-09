@@ -1,3 +1,4 @@
+#! /usr/bin/env sh
 # Load the variable
 export declare out=$1
 ncores=$2

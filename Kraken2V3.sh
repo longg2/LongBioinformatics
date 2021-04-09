@@ -1,3 +1,4 @@
+#! /usr/bin/env bash
 # TODO:
 # • Bracken Option as well (CAN BE PARALLELIZED EASILY)
 # Functions that do the heavy lifting.  Will also allow me to parallelize to my hearts content
@@ -6,10 +7,9 @@ FileIdentificationInFunction(){ # Since I can't export Functions, this here is a
 	local location=$2
 
 	# Finding the indices which have the same samplename
-	sampleFiles=(find $location -name ${sample} -type f -exec basename {} \;)
+	sampleFiles=( $(find $location -name "${sample}*" -type f -exec basename {} \;) )
 	#sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
 }
-
 FileIdentification(){ # Extract Files from an array using results from another array
 	local sample=$1 # Basename of the file
 	local arrayFiles=$files
@@ -17,28 +17,46 @@ FileIdentification(){ # Extract Files from an array using results from another a
 	# Finding the indices which have the same samplename
 	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
 }
+FileExtractionInFunction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
+	# Unsetting variables in case they're already defined from a previous run 
+	# unset merged
+	# unset r1
+	# unset r2
 
-StringDeduplication(){ # Convenient Wrapper for parallelization
-	local sample=$1
-	local folder=$2
-	FileIdentificationInFunction $sample $folder
-	FileExtraction $folder
-	
-	# Now for the actual deduplication
-	if [ "$merged" != "NA" ]; then # If I found a merged file
-		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq $merged -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}PrinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 2> /dev/null | gzip > ${out}PooledLanes/${sample}_Merged.fastq.gz
+	local folderExtraction=$1
+	# This here is a fix that's needed if -v doesn't
+	merged="NA"
+	r1="NA"
+	r2="NA"
+
+	# Creating a hidden text file of file names
+	printf '%s\n' "${sampleFiles[@]}" #> .hiddenlist.list
+
+	# Identifying the files
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1"; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
+	        r1="$folderExtraction/$fileName"
 	fi
 
-	if [ "$r1" != "NA" ]; then # If I found a paired file
-		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample}_r -min_len $len -derep 14 -log ${out}PrinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20 2> /dev/null
-
-	# Because of how prinseq is coded, I'll need to compress separately	
-		gzip -c ${sample}_r1.fastq > ${out}PooledLanes/${sample}_r1.fastq.gz
-		gzip -c ${sample}_r2.fastq > ${out}PooledLanes/${sample}_r2.fastq.gz
-
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2"; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2')
+	        r2="$folderExtraction/$fileName"
 	fi
+
+	# Two cases for the merged.  Want to control for shenanigans
+	if printf '%s\n' "${sampleFiles[@]}" | grep -q -i "$sample\.f.*"; then
+	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -v -q "_\.f*") ]; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -i "$sample\.f.*")
+	        merged="$folderExtraction/$fileName"
+	fi
+
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged"; then
+	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged") ]; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
+	        merged="$folderExtraction/$fileName"
+	fi
+
 }
-
 FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
 	# Unsetting variables in case they're already defined from a previous run 
 	# unset merged
@@ -87,7 +105,6 @@ DeduplicateArray(){ # Deduplicating the sample names
        	done) # Getting only the sample names
 	samples=( $(echo ${sampleNames[@]} | tr ' ' '\n' | uniq | tr '\n' ' ') )
 }
-
 GzipDetection(){ # Need to ID Gzipped files and decompress if needed
 	local file=$1
 	local folderV2=$2
@@ -99,7 +116,6 @@ GzipDetection(){ # Need to ID Gzipped files and decompress if needed
 		cp $folderV2/$file IntGzip/$name
 	fi
 }
-
 KrakenAnalysis(){ # This here will do the heavy lifting for the script
 
 	local sample=$1 # Need to get the sample name
@@ -122,7 +138,6 @@ KrakenAnalysis(){ # This here will do the heavy lifting for the script
 	fi
 		
 }
-
 TaxaExtraction(){ # If requested, we need to get the reads which mapped against a particular taxa
 	local sample=$1 # Need to get the sample name
 	local folder=$2 # Here we'll get the StringDedup Folder
@@ -142,6 +157,27 @@ TaxaExtraction(){ # If requested, we need to get the reads which mapped against 
 				-s $r1 -s2 $r2
 	fi
 
+}
+StringDeduplication(){ # Convenient Wrapper for parallelization
+	local sample=$1
+	local folderFunction=$2
+	local len=$3
+	FileIdentificationInFunction $sample $folderFunction
+	FileExtractionInFunction $folderFunction
+	
+	# Now for the actual deduplication
+	if [ "$merged" != "NA" ]; then # If I found a merged file
+		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq $merged -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz > /dev/null 2> /dev/null
+	fi
+
+	if [ "$r1" != "NA" ]; then # If I found a paired file
+		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20 > /dev/null 2> /dev/null
+
+	# Because of how prinseq is coded, I'll need to compress separately	
+		gzip -c TMP/${sample}_1.fastq > ${out}StringDedup/${sample}_r1.fastq.gz
+		gzip -c TMP/${sample}_2.fastq > ${out}StringDedup/${sample}_r2.fastq.gz
+
+	fi
 }
 
 usage() { printf 'Kraken2 Wrapper Script V0.5
@@ -167,8 +203,10 @@ log() {	printf "Kraken settings for $(date):
 	Taxa Extraction:\t${taxa}\n"; exit 0;
 }
 
+# Need to export some of the functions
 export -f GzipDetection
 export -f FileIdentificationInFunction
+export -f FileExtractionInFunction
 export -f FileExtraction
 export -f StringDeduplication
 export -f KrakenAnalysis
@@ -220,31 +258,35 @@ done
 log | tee $log
 
 # Making the Directories
-mkdir -p ${out}Reports
-mkdir -p ${out}CombinedReports
-mkdir -p ${out}UnClass
-mkdir -p ${out}Class
-mkdir -p ${out}Krona
-mkdir -p ${out}Output
-mkdir -p prinseqLog
-#mkdir -p WorkFolder
-#mkdir -p FilteredData
+#mkdir -p ${out}Reports
+#mkdir -p ${out}CombinedReports
+#mkdir -p ${out}UnClass
+#mkdir -p ${out}Class
+#mkdir -p ${out}Krona
+#mkdir -p ${out}Output
 
 # Getting the Sample Names
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
 # We need to determine if the file is gzipped
-echo "Decompressing the files"
-mkdir -p IntGzip
-parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+#echo "Decompressing the files"
+#mkdir -p IntGzip
+#parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup
 mkdir -p ${out}prinseqLog
+mkdir -p TMP
 echo "String Deduplciation with prinseq"
-parallel -j $ncores --bar "StringDeduplication {} IntGzip" ::: "${samples[@]}"
 
-rm -rf IntGzip
+for sample in ${samples[@]}
+do
+	echo $sample
+	StringDeduplication $sample IntGzip $len
+done
+#parallel -j $ncores --bar "StringDeduplication {} IntGzip $len" ::: "${samples[@]}"
+rm -rf TMP
+#rm -rf IntGzip
 
 # Now for the Kraken Loop
 #for sample in "${samples[@]}";

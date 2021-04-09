@@ -1,4 +1,4 @@
-#! /usr/bin/env sh
+#! /usr/bin/env bash
 # These are the functions that actually do the work.  Mean to make parallelization easier to do
 FileIdentification(){ # Extract Files from an array using results from another array
 	local sample=$1 # Basename of the file
