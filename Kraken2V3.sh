@@ -30,7 +30,7 @@ FileExtractionInFunction(){ # Assign files to their variables.  Assumes that $sa
 	r2="NA"
 
 	# Creating a hidden text file of file names
-	printf '%s\n' "${sampleFiles[@]}" #> .hiddenlist.list
+	#printf '%s\n' "${sampleFiles[@]}" #> .hiddenlist.list
 
 	# Identifying the files
 	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1"; then
@@ -119,10 +119,10 @@ GzipDetection(){ # Need to ID Gzipped files and decompress if needed
 KrakenAnalysis(){ # This here will do the heavy lifting for the script
 
 	local sample=$1 # Need to get the sample name
-	local folder=$2 # Here we'll get the StringDedup Folder
+	local folderFunction=$2 # Here we'll get the StringDedup Folder
 	local ncores=$3 # How many cores will be used?
-	FileIdentificationInFunction $sample $folder
-	FileExtraction $folder
+	FileIdentificationInFunction $sample $folderFunction
+	FileExtractionInFunction $folderFunction
 
 	# Now to actually run Kraken
 	if [ "$merged" != "NA" ]; then # If I found a merged file
@@ -140,9 +140,9 @@ KrakenAnalysis(){ # This here will do the heavy lifting for the script
 }
 TaxaExtraction(){ # If requested, we need to get the reads which mapped against a particular taxa
 	local sample=$1 # Need to get the sample name
-	local folder=$2 # Here we'll get the StringDedup Folder
-	FileIdentificationInFunction $sample $folder # This is all being done as we need to ensure that we're doing both paired and merged reads
-	FileExtraction $folder
+	local folderFunction=$2 # Here we'll get the StringDedup Folder
+	FileIdentificationInFunction $sample $folderFunction
+	FileExtractionInFunction $folderFunction
 
 	if [ "$merged" != "NA" ]; then # If I found a merged file
 		extract_kraken_reads.py -k ${out}Output/${sample}Merged.out -r ${out}Reports/${sample}Merged.tab \
@@ -167,11 +167,11 @@ StringDeduplication(){ # Convenient Wrapper for parallelization
 	
 	# Now for the actual deduplication
 	if [ "$merged" != "NA" ]; then # If I found a merged file
-		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq $merged -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz > /dev/null 2> /dev/null
+		prinseq -fastq $merged -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz
 	fi
 
 	if [ "$r1" != "NA" ]; then # If I found a paired file
-		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20 > /dev/null 2> /dev/null
+		prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
 
 	# Because of how prinseq is coded, I'll need to compress separately	
 		gzip -c TMP/${sample}_1.fastq > ${out}StringDedup/${sample}_r1.fastq.gz
@@ -179,8 +179,19 @@ StringDeduplication(){ # Convenient Wrapper for parallelization
 
 	fi
 }
+ProgressBar() { # From github.com/fearside/ProgressBar
+	# Process data
+		let _progress=(${1}*100/${2}*100)/100
+		let _done=(${_progress}*4)/10
+		let _left=40-$_done
+	# Build progressbar string lengths
+	_done=$(printf "%${_done}s")
+	_left=$(printf "%${_left}s")
+	printf "\rProgress : [${_done// />}${_left// /-}] ${_progress}%%"
 
-usage() { printf 'Kraken2 Wrapper Script V0.5
+}	
+
+usage() { printf 'Kraken2 Wrapper Script V0.75
 	Will pipe Kraken2 to the correct folders and create Krona plots.
         -i\tWhere the sequences are
 	-o\tOutput Prefix (Default = Kraken2)
@@ -189,18 +200,17 @@ usage() { printf 'Kraken2 Wrapper Script V0.5
 	-l\tLog File Name
 	-k\tMinimum Fragment Length (Default = 30)
 	-t\tTaxa Being Extracted (Comma Separated list)? (Default = NONE)
-        -h\tShow this help message and exit\n' 1>&2; exit 1; }
+        -h\tShow this help message and exit\n' 1>&2; exit 0; }
 log() {	printf "Kraken settings for $(date):
 	Log File:\t${log}
-	Input folder:\t${in}
-	Output folder:\t${outPrefix}
+	Input folder:\t${folder}
+	Output folder:\t${out}
 	Database:\t${db}
 	CPU Threads:\t${ncores}
-	Gzip:\t${zipped}
 	-------------------------------------
 	Min Length:\t${len}
-	String Deduplication:\t${dedup}
-	Taxa Extraction:\t${taxa}\n"; exit 0;
+	Taxa Extraction:\t${taxa}
+	-------------------------------------\n"; exit 0;
 }
 
 # Need to export some of the functions
@@ -215,8 +225,7 @@ export -f TaxaExtraction
 declare -i len=30
 log="$(date +'%Y%m%d').log"
 declare -i ncores=8
-out="Kraken2"
-export $out
+export out="Kraken2"
 taxa="NULL"
 while getopts "i:d:n:o:l:t:k:h" arg; do
         case $arg in
@@ -227,7 +236,7 @@ while getopts "i:d:n:o:l:t:k:h" arg; do
                         ;;
                 d)
                         declare -r db=${OPTARG}
-			export $db
+			#export $db
                         #echo "Using the Kraken2 database at $db"
                         ;;
                 n)
@@ -235,8 +244,8 @@ while getopts "i:d:n:o:l:t:k:h" arg; do
                         #echo "Using $ncores threads"
                         ;;
 		o)
-			out=${OPTARG}
-			export $out
+			export out=${OPTARG}
+			#export $out
 			#echo "Outputing to $outPrefix"
 			;;
 		l)
@@ -255,23 +264,32 @@ while getopts "i:d:n:o:l:t:k:h" arg; do
                         ;;
         esac
 done
+
+if [ -z ${folder+x} ] || [ -z ${db+x} ]; then
+	echo "You are missing either the Input folder or the Kraken Database"
+	usage
+	exit 1
+fi
+
 log | tee $log
+printf "\n"
 
 # Making the Directories
-#mkdir -p ${out}Reports
-#mkdir -p ${out}CombinedReports
-#mkdir -p ${out}UnClass
-#mkdir -p ${out}Class
-#mkdir -p ${out}Krona
-#mkdir -p ${out}Output
+mkdir -p ${out}Reports
+mkdir -p ${out}CombinedReports
+mkdir -p ${out}UnClass
+mkdir -p ${out}Class
+mkdir -p ${out}Krona
+mkdir -p ${out}Output
+mkdir -p ${out}KrakenLog
 
 # Getting the Sample Names
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
 # We need to determine if the file is gzipped
-#echo "Decompressing the files"
-#mkdir -p IntGzip
-#parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+echo "Decompressing the files"
+mkdir -p IntGzip
+parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup
@@ -279,32 +297,43 @@ mkdir -p ${out}prinseqLog
 mkdir -p TMP
 echo "String Deduplciation with prinseq"
 
+total=${#samples[@]}
+count=0
+ProgressBar $count $total
 for sample in ${samples[@]}
 do
-	echo $sample
-	StringDeduplication $sample IntGzip $len
+	StringDeduplication $sample IntGzip $len 2> /dev/null
+	count=$(echo "$count + 1" | bc)
+	ProgressBar $count $total
 done
-#parallel -j $ncores --bar "StringDeduplication {} IntGzip $len" ::: "${samples[@]}"
+#parallel -j $ncores --bar "StringDeduplication {} IntGzip $len" ::: "${samples[@]}" # DOESN'T WORK!!
 rm -rf TMP
-#rm -rf IntGzip
+rm -rf IntGzip
 
-# Now for the Kraken Loop
-#for sample in "${samples[@]}";
-#do
-#	KrakenAnalysis $sample ${out}StringDedup $ncores # This here will do both Paired and unpaired runs.  Can't parallelize it either so it's the rate limiting step as well
-#done
-#
+ Now for the Kraken Loop
+echo "Running Kraken2 on ${#samples[@]} samples"
+total=${#samples[@]}
+count=0
+ProgressBar $count $total
+for sample in "${samples[@]}";
+do
+	KrakenAnalysis $sample ${out}StringDedup $ncores 2> ${out}KrakenLog/${sample}.log # This here will do both Paired and unpaired runs.  Can't parallelize it either so it's the rate limiting step as well
+	count=$(echo "$count + 1" | bc)
+	ProgressBar $count $total
+done
+
 ## Now to combine the reports and create the Krona Plot
-#parallel --bar -j $ncores "combine_kreports.py -r ${out}Reports/{} --only-combined --no-header -o ${out}CombinedReports/{}.tab > /dev/null 2> /dev/null;
-#			kreport2krona.py -r ${out}CombinedReports/{}.tab -o ${out}Krona/{}.txt" ::: "${samples[@]}"
+
+echo "Combining the Merged and Paired Reports and preparing for a Krona plot"
+parallel --bar -j $ncores "combine_kreports.py -r ${out}Reports/{}*tab --only-combined --no-header -o ${out}CombinedReports/{}.tab > /dev/null 2> /dev/null; kreport2krona.py -r ${out}CombinedReports/{}.tab -o ${out}Krona/{}.txt" ::: "${samples[@]}"
 #ktImportText -o ${outPrefix}Krona.html ${outPrefix}Krona/* # making the KronaPlot
 #
 ## If requested, we want to also pull out the taxa of interest
-#if [ $taxa != "NULL" ];then
-#	mkdir -p ${out}TaxaInterest
-#	taxa2="$(echo $taxa | sed -e 's/,/ /g')"
-#	export $taxa2
-#
-#	# Now to do the actual work
-#	parallel --bar -j $ncores "TaxaInterest {} ${out}StringDedup" ::: "${samples[@]}"
-#fi
+if [ $taxa != "NULL" ];then
+	mkdir -p ${out}TaxaInterest
+	export taxa2="$(echo $taxa | sed -e 's/,/ /g')"
+	echo "Extracting sequences identified as taxons $taxa2"
+
+	# Now to do the actual work
+	parallel --bar -j $ncores "TaxaExtraction {} ${out}StringDedup > /dev/null 2> /dev/null" ::: "${samples[@]}"
+fi
