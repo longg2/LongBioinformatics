@@ -88,8 +88,6 @@ DeduplicateArray(){ # Deduplicating the sample names
 
 }
 
-export -f Trimming
-
 StringDeduplication(){ # Convenient Wrapper for parallelization
 	
 	# Now for the actual deduplication
@@ -128,6 +126,8 @@ log() {	printf "Mapping settings for $(date):
 	CPU Threads:\t${ncores}
 	-------------------------------------\n"; exit 0;
 }
+
+#export -f Trimming
 
 #Default Values
 out="QC"
