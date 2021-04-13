@@ -1,57 +1,123 @@
-#! /usr/bin/env sh
-# These are the files and variables that will be needed
-usage() { printf 'Ancient QC Script V0.5
-	Note that if planning on assembling contigs, use <FILE> instead
-        -s\tThe folder that contains the Raw sequencing files
-        -r\tThe BWA index.  Will be mapping reads against it
-	-k\tMinimum Fragment Length (Default: 30)
+#! /usr/bin/env bash
+
+DeduplicateArray(){ # Deduplicating the sample names
+	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
+	local sampleNames=$(for name in ${array[@]}; do
+		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I')";
+		echo $tmp;
+       	done) # Getting only the sample names
+	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
+
+}
+FileIdentification(){ # Extract Files from an array using results from another array
+	local sample=$1 # Basename of the file
+	local arrayFiles=$files
+
+	# Finding the indices which have the same samplename
+	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
+}
+FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
+	# Unsetting variables in case they're already defined from a previous run 
+	# unset merged
+	# unset r1
+	# unset r2
+
+	# This here is a fix that's needed if -v doesn't
+	merged="NA"
+	r1="NA"
+	r2="NA"
+
+	# Creating a hidden text file of file names
+	#printf '%s\n' "${sampleFiles[@]}" #> .hiddenlist.list
+
+	# Identifying the files
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1"; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
+	        r1="$folder/$fileName"
+	fi
+
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2"; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2')
+	        r2="$folder/$fileName"
+	fi
+
+	# Two cases for the merged.  Want to control for shenanigans
+	if printf '%s\n' "${sampleFiles[@]}" | grep -q -i "$sample\.f.*"; then
+	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -v -q "_\.f*") ]; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -i "$sample\.f.*")
+	        merged="$folder/$fileName"
+	fi
+
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged"; then
+	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged") ]; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
+	        merged="$folder/$fileName"
+	fi
+
+}
+AncientTrimming(){ # This uses a combination leeHom and AdapterRemoval
+
+	# First step is to identify the Adapters
+	/opt/local/AdapterRemoval/AdapterRemoval --identify-adapters --file1 $r1 --file2 $r2 > tmp.out 2> /dev/null
+	ada1=$(grep "adapter1" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
+	ada2=$(grep "adapter2" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
+	rm tmp.out
+
+	# Next we want to perform the trimming
+	leeHomMulti --ancientdna -f $ada1 -s $ada2 --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fq2 $r2 -fqo ${out}Trimmed/${sample} 2> /dev/null
+
+}
+ProgressBar() { # From github.com/fearside/ProgressBar
+	# Process data
+		let _progress=(${1}*100/${2}*100)/100
+		let _done=(${_progress}*4)/10
+		let _left=40-$_done
+	# Build progressbar string lengths
+	_done=$(printf "%${_done}s")
+	_left=$(printf "%${_left}s")
+	printf "\rProgress : [${_done// />}${_left// /-}] ${_progress}%%"
+
+}	
+usage() { printf 'Ancient QC Script V1
+	Very simple.  Want this to focus primarily the workup
+	prior to analysis.
+        -i\tThe folder that contains the Raw sequencing files
+	-o\tThe Output Prefix
         -n\tNumber of CPU Threads to be used
-	-q\tMinimum QUality (Default: 30)
 	-l\tLog File Name (Default: $date)
         -h\tShow this help message and exit\n' 1>&2; exit 1; }
 
 # Creating a simple command to save the settings used.
-log() {	printf "Mapping settings for $(date):
+log() {	printf "Ancient Mapping settings for $(date):
 	Log File:\t${log}
-	Input folder:\t${raw}
-	Reference:\t${ref}
-	CPU Threads:\t${ncores}
-	-------------------------------------
-	Min Quality:\t${qual}
-	Min Length:\t${len}\n"; exit 0;
+	Input folder:\t${folder}
+	Output folder:\t${out}
+	CPU Threads:\t${ncores}\n"; exit 0;
 }
 
+##################################
 #Default Values
-qual=30
-len=30
-out="BWAMappingScript"
-ncores=8
+out="AncientQC"
+declare -i ncores=8
 log="$(date +'%Y%m%d').log"
 
-while getopts "s:r:k:n:q:l:h" arg; do
+while getopts "i:o:n:h" arg; do
         case $arg in
-                s)
-                        raw=${OPTARG}
+                i)
+                        declare -r folder=${OPTARG}
+			declare -r files=$(find $folder/* -type f -printf "%f\n") # Making an array of files
                         #echo "The raw sequencing files are located in $raw"
                         ;;
-                r)
-                        ref=${OPTARG}
-                        #echo "We're mapping the QCed reads against $ref"
-                        ;;
-                k)
-                        len=${OPTARG}
-                        #echo "Using a minimum length of ${len}bp"
-                        ;;
                 n)
-                        ncores=${OPTARG}
+                        declare -i ncores=${OPTARG}
                         #echo "Using $ncores"
-                        ;;
-		q)
-			qual=${OPTARG}
-			#echo "Requiring a minimum mapping quality of $qual"
                         ;;
                 l)
                         log=${OPTARG}
+                        #echo "Settings are being outputted to $log"
+                        ;;
+                o)
+                        out=${OPTARG}
                         #echo "Settings are being outputted to $log"
                         ;;
                 h | *)
@@ -60,115 +126,42 @@ while getopts "s:r:k:n:q:l:h" arg; do
                         ;;
         esac
 done
-logBWA="${log/%.*}BWA.log"
-
+###################################################################
 # Writing the Log File
 log | tee $log
 
-####################################
-###Trimming the reads with leeHom###
-####################################
-mkdir -p leeHomOut
-mkdir -p leeHomOutLogs
-echo "Trimming and Merging Reads"
+mkdir -p ${out}Trimmed
+mkdir -p ${out}Failed
+mkdir -p ${out}PooledLanes
+###################################################################
 
-total=$(find $raw/* | wc -l)
-count=2
+DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
-for f in $raw/*R1*; do
-	sample=$(basename $f .fastq.gz)
-	sample="${sample%_R1_001}"
-	R2=$(echo "${sample}_R2_001.fastq.gz")
-	dir=$(dirname $f)
-
-	/opt/local/AdapterRemoval/AdapterRemoval --identify-adapters --file1 $f --file2 $dir/$R2 > tmp.out
-	ada1=$(grep "adapter1" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
-	ada2=$(grep "adapter2" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
-
-	leeHomMulti --ancientdna -f $ada1 -s $ada2 --log leeHomOutLogs/$sample.log -t $ncores -fq1 $f -fq2 $dir/$R2 -fqo leeHomOut/$sample
-
-	echo "$sample completed ($count/$total)"
-	count=$(echo "$count + 2" | bc)
+echo "Trimming the ${#samples[@]} samples found in ${folder}.  This may take a while"
+total=${#samples[@]}
+count=0
+ProgressBar $count $total
+for sample in ${samples[@]}; do
+	FileIdentification $sample
+	FileExtraction
+	AncientTrimming
+	
+	count=$(echo "$count + 1" | bc)
+	ProgressBar $count $total
 done
-
-mkdir -p leeHomOut/Failed
-mv leeHomOut/*fail* leeHomOut/Failed/
 
 ###################
 ###Pooling Lanes###
 ###################
-mkdir -p PooledLanes
-echo "Pooling Lanes Together"
 
-### Getting the unique sample names -- Removing any information about lanes
-samples=$(find leeHomOut/ -maxdepth 1 -type f | sed -e "s/leeHomOut\///g" -e "s/.fq.gz//g" -e "s/_L00[1-2].*//g" -e "s/_r[1-2]//g" | sort | uniq)
-echo $samples
-##
+pooledNames=$(for name in ${samples[@]}; do # This was lifted from DeduplicateArray().
+	tmp="$(echo $name |sed -e 's/_L00.*//I')";
+		echo $tmp;
+       	done) # Getting only the sample names
+pooledNames=( $(echo ${pooledNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') ) # This was lifted from Deduplicate Array
 
-for sample in $samples; do
-	if [ $(ls leeHomOut/${sample}* | wc -l) -eq 6 ]; then
-		echo "$sample has two lanes"
-		cat leeHomOut/${sample}_L001.fq.gz leeHomOut/${sample}_L002.fq.gz > PooledLanes/${sample}.fastq.gz
-		cat leeHomOut/${sample}_L001_r1.fq.gz leeHomOut/${sample}_L002_r1.fq.gz > PooledLanes/${sample}_r1.fastq.gz
-		cat leeHomOut/${sample}_L001_r2.fq.gz leeHomOut/${sample}_L002_r2.fq.gz > PooledLanes/${sample}_r2.fastq.gz
-	else
-		echo "$sample has one lane"
-		cat leeHomOut/${sample}_L00*.fq.gz > PooledLanes/${sample}.fastq.gz
-		cat leeHomOut/${sample}_L00*_r1.fq.gz > PooledLanes/${sample}_r1.fastq.gz
-		cat leeHomOut/${sample}_L00*_r2.fq.gz > PooledLanes/${sample}_r2.fastq.gz
-		#cp -f leeHomOut/${sample}_L00*.fq.gz PooledLanes/${sample}.fastq.gz # Weird bug.... This line didn't work
-		#cp -f leeHomOut/${sample}_L00*_r1.fq.gz PooledLanes/${sample}_r1.fastq.gz
-		#cp -f leeHomOut/${sample}_L00*_r2.fq.gz PooledLanes/${sample}_r2.fastq.gz
-	fi
-
-done
-
-#####################################
-### Mapping against the Reference ###
-#####################################
-
-#~/Scripts/V2Folder/QC/BWAalnPairedMapping.sh -r $ref -i PooledLanes -o BWAMapping -k $len -q $qual -l $logBWA -n $ncores 
-
-# Human Mapping
-#echo "Filtering against $(basename $ref)"
-#mkdir -p UnmappedReads 
-#mkdir -p MappedReads
-#mkdir -p DeduplicatedMappings
-##refFilt="~/Scratch/Covid/BatLib/BatGenomes.fna"
-#total=$(find PooledLanes/*r1* | wc -l)
-#count=1
-#
-## Human Merged
-#for file in PooledLanes/*r1*; do
-#	# Getting set up for the two mappings needed here
-#	sample=$(basename $file .fastq.gz)
-#	sample="${sample%_r1}"
-#	echo "$sample"
-#
-#	# Performing the mapping for the Merged sequences
-#	bwa aln -o 2 -n 0.01 -l 16500 $ref PooledLanes/$sample.fastq.gz -t $ncores 2>/dev/null|\
-#		bwa samse $ref /dev/stdin PooledLanes/$sample.fastq.gz 2>/dev/null| samtools sort - |\
-#		samtools view -h -m $len -U tmp.sam > Merged.sam
-#	samtools fastq tmp.sam > tmp.fastq
-#	~/Applications/bbmap/reformat.sh in=tmp.fastq out=Mtmp.fastq minlength=$len overwrite=true 
-#
-#	# Getting the Forward Reads
-#	bwa aln -o 2 -n 0.01 -l 16500 $ref $file -t $ncores 2>/dev/null |\  # First index
-#		bwa samse $ref /dev/stdin $file 2>/dev/null | samtools sort - |\
-#		samtools view -h -m $len -U tmp.sam > Forward.sam
-#	samtools fastq tmp.sam > tmp.fastq
-#	~/Applications/bbmap/reformat.sh in=tmp.fastq out=Ftmp.fastq minlength=$len overwrite=true
-#
-#	# Making the BAM files
-#	samtools merge -f -O BAM MappedReads/$sample.bam Merged.sam Forward.sam
-#	cat Mtmp.fasta Ftmp.fasta > UnmappedReads/${sample}.fasta
-#
-#	# QoL progress
-#	printf "$sample has been filtered ($count/$total)\n"
-#	count=$(echo "$count + 1" | bc)
-#	rm -rf Merged.sam Forward.sam *tmp*
-#done
-#
-## Deduplicating Reads
-#parallel -j $ncores --bar '/usr/local/biohazard/bin/bam-rmdup -c -o DeduplicatedMappings/{/} {} 2> /dev/null' ::: MappedReads/*bam # Removes Duplicates
-#parallel -j $ncores --bar 'samtools index {} > {}.bai' ::: DeduplicatedMappings/*bam # Makes the indices
+mv ${out}Trimmed/*fail* ${out}Failed # Hiding the Failed before anything happens....
+printf "\nPooling the lanes together\n"
+parallel --bar -j $ncores "cat ${out}Trimmed/{}_L00{1,2}.fq.gz > ${out}PooledLanes/{}.fastq.gz 2> /dev/null;
+	cat ${out}Trimmed/{}*r1.fq.gz > ${out}PooledLanes/{}_r1.fastq.gz;
+	cat ${out}Trimmed/{}*r2.fq.gz > ${out}PooledLanes/{}_r2.fastq.gz;" ::: "${pooledNames[@]}" # The 2> is included as we won't have two lanes all the time.  Want to hide these errors if that is the case since it's working as intended.  Need a better way to do it....

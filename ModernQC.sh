@@ -130,7 +130,7 @@ log() {	printf "Mapping settings for $(date):
 #export -f Trimming
 
 #Default Values
-out="QC"
+out="ModernQC"
 ncores=8
 export len=30
 log="$(date +'%Y%m%d').log"
