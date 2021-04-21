@@ -2,16 +2,19 @@
 ######################################
 ### Functions that I'll be calling ###
 ######################################
-usage() { printf 'BWA aln Mapping V1
+usage() { printf 'BWA aln Mapping V1.1
 	Mapping using aln is more complicated than it warrants,
 	so here is a useful wrapper that will hopefully make life
 	easier.
+
+	V1.1 -> Multimappers Separated
 	-i\tThe folder the fasta files (REQUIRED)
 	-o\tOutput folder of the BAM files (Default: BWAMappingScript)
 	-r\tThe BWA index.  Will be mapping reads against it (REQUIRED)
 	-k\tMinimum Fragment Length (Default: 30)
 	-q\tMinimum Mapping Quality (Default: 30)
 	-d\tDeduplicate the bam files? (Default: FALSE)
+	-m\tSeparate the MultiMappers? (Default: FALSE)
 	-n\tNumber of CPU Threads to be used (Default: 8)
 	-l\tLog File Name (Default: $date)
         -h\tShow this help message and exit\n' 1>&2; exit 1; }
@@ -26,6 +29,7 @@ log() {	printf "BWA aln settings for $(date):
 	Min Quality:\t${qual}
 	Min Length:\t${len}
 	Deduplicated:\t${dedup}
+	Multimappers Separated:\t${multi}
 	-------------------------------------\n"; exit 0;
 }
 
@@ -103,23 +107,6 @@ DeduplicateArray(){ # Deduplicating the sample names
 
 }
 
-#FastaorFastq(){ # Figuring out if fasta or fastq
-#	local tmp=$1
-#	if file $tmp | grep -q "compressed"; then 
-#		local firstChar=$(zcat $1 | head -c 1)
-#	else 
-#		local firstChar=$(cat $1 | head -c 1)
-#	fi
-#
-#	if [ "$firstChar" == "@" ];then
-#		exit 0
-#	elif [ "$firstChar" == ">" ];then
-#		exit 1
-#	else
-#		exit 2
-#	fi
-#}
-
 FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
 	# Unsetting variables in case they're already defined from a previous run 
 	# unset merged
@@ -170,14 +157,19 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam |\
 			samtools sort -	> tmpM.bam  
 	
-		samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
+		# Now to figure out if Multimappers are to be extracted
+		if [ "$multi" != "TRUE" ]; then
+			samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
 
-		# Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
-		#samtools view tmp.bam | awk '{if($5 == 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip > ${out}Qual0Reads/${sample}.fastq.gz
-		#samtools view tmp.bam | awk '{if($5 > 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip > ${out}UnmappedReads/${sample}.fastq.gz
+		else
+			# Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
+			samtools fastq -f 4 tmp.bam | gzip > tmpUnmapped.fastq.gz #${out}UnmappedReads/${sample}.fastq.gz # All the unmapped Reads
+			samtools view -F 4 tmp.bam | awk '{if($5 > 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip -c | cat tmpUnmapped.fastq.gz -  > ${out}UnmappedReads/${sample}.fastq.gz # The reads which were poor matches 
+			samtools view -F 4 tmp.bam | awk '{if($5 == 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip > ${out}Qual0Reads/${sample}.fastq.gz # The Multimappers
+		fi
 	fi
 	
-	if [ "$r1" != "NA" ]; then # If I found a merged file
+	if [ "$r1" != "NA" ]; then # If I found a Paired set
 	#if [ -v r1 ]; then # If we have paired reads
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $r1 -t $ncores  > tmp1.sai # First index
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $r2 -t $ncores  > tmp2.sai # Second Index
@@ -186,16 +178,19 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam |\
 		       	samtools sort - > tmpP.bam 
 		
-		samtools fastq -c 6 tmp.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 
+		if [ "$multi" != "TRUE" ]; then
+			samtools fastq -c 6 tmp.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 
 
-		# Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
-		# R1 reads
-		#samtools view tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r1.fastq.gz
-		#samtools view tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}UnmappedReads/${sample}_r1.fastq.gz
-
-		## R2 reads
-		#samtools view tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r2.fastq.gz
-		#samtools view tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}UnmappedReads/${sample}_r2.fastq.gz
+		else
+			# Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
+			samtools fastq -f 4 -c 6 tmp.bam -1 tmpUnmapped_r1.fastq.gz -2 tmpUnmapped_r1.fastq.gz -s /dev/null # All the unmapped Reads
+			# R1 reads
+			samtools view -F 4 tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip -c | cat tmpUnmapped_r1.fastq.gz - > ${out}UnmappedReads/${sample}_r1.fastq.gz # The reads which were poor matches
+			samtools view -F 4 tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r1.fastq.gz # The Multimappers
+			## R2 reads
+			samtools view -F 4 tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip -c | cat tmpUnmapped_r2.fastq.gz - > ${out}UnmappedReads/${sample}_r2.fastq.gz
+			samtools view -F 4 tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r2.fastq.gz # The Multimappers
+		fi
 	
 	fi
 	
@@ -241,12 +236,13 @@ out="BWAMappingScript"
 declare -i ncores=8
 log="$(date +'%Y%m%d').log"
 dedup="FALSE"
+multi="FALSE"
 
 ##############
 ### The UI ###
 ##############
 
-while getopts "i:o:q:r:l:k:n:hd" arg; do
+while getopts "i:o:q:r:l:k:n:hdm" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}
@@ -277,6 +273,9 @@ while getopts "i:o:q:r:l:k:n:hd" arg; do
                         declare -i ncores=${OPTARG}
                         #echo "Using $ncores CPU Threads"
                         ;;
+		m)
+			multi="TRUE"
+			;;
 		d)
 			dedup="TRUE"
 			;;
