@@ -101,7 +101,7 @@ out="AncientQC"
 declare -i ncores=8
 log="$(date +'%Y%m%d').log"
 
-while getopts "i:o:n:h" arg; do
+while getopts "i:o:n:l:h" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}

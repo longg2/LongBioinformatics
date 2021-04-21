@@ -283,13 +283,19 @@ mkdir -p ${out}Krona
 mkdir -p ${out}Output
 mkdir -p ${out}KrakenLog
 
-# Getting the Sample Names
+## Getting the Sample Names
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
 # We need to determine if the file is gzipped
 echo "Decompressing the files"
 mkdir -p IntGzip
-parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+if [ $ncores > 30  ];
+then
+	#Preventing an accidental swamping of the cluster
+	parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
+else
+	parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+fi
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup
@@ -310,7 +316,7 @@ done
 rm -rf TMP
 rm -rf IntGzip
 
- Now for the Kraken Loop
+# Now for the Kraken Loop
 echo "Running Kraken2 on ${#samples[@]} samples"
 total=${#samples[@]}
 count=0
@@ -322,7 +328,7 @@ do
 	ProgressBar $count $total
 done
 
-## Now to combine the reports and create the Krona Plot
+# Now to combine the reports and create the Krona Plot
 
 echo "Combining the Merged and Paired Reports and preparing for a Krona plot"
 parallel --bar -j $ncores "combine_kreports.py -r ${out}Reports/{}*tab --only-combined --no-header -o ${out}CombinedReports/{}.tab > /dev/null 2> /dev/null; kreport2krona.py -r ${out}CombinedReports/{}.tab -o ${out}Krona/{}.txt" ::: "${samples[@]}"

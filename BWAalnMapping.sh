@@ -171,6 +171,10 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 			samtools sort -	> tmpM.bam  
 	
 		samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
+
+		# Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
+		#samtools view tmp.bam | awk '{if($5 == 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip > ${out}Qual0Reads/${sample}.fastq.gz
+		#samtools view tmp.bam | awk '{if($5 > 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip > ${out}UnmappedReads/${sample}.fastq.gz
 	fi
 	
 	if [ "$r1" != "NA" ]; then # If I found a merged file
@@ -183,6 +187,15 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 		       	samtools sort - > tmpP.bam 
 		
 		samtools fastq -c 6 tmp.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 
+
+		# Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
+		# R1 reads
+		#samtools view tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r1.fastq.gz
+		#samtools view tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}UnmappedReads/${sample}_r1.fastq.gz
+
+		## R2 reads
+		#samtools view tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r2.fastq.gz
+		#samtools view tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}UnmappedReads/${sample}_r2.fastq.gz
 	
 	fi
 	
@@ -289,6 +302,7 @@ log | tee $log # The inital log file
 # The Folders
 mkdir -p ${out}MappedReads
 mkdir -p ${out}UnmappedReads 
+mkdir -p ${out}Qual0Reads 
 mkdir -p ${out}BWALogs
 [ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 
