@@ -1,5 +1,6 @@
 #! /usr/bin/env bash
 
+# Setting the folders properly
 DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	local sampleNames=$(for name in ${array[@]}; do
@@ -57,13 +58,20 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 }
 AncientTrimming(){ # This uses a combination leeHom and AdapterRemoval
 
-	# First step is to identify the Adapters
-	/opt/local/AdapterRemoval/AdapterRemoval --identify-adapters --file1 $r1 --file2 $r2 > tmp.out 2> /dev/null
-	ada1=$(grep "adapter1" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
-	ada2=$(grep "adapter2" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
+	if [ "$r2" == "NA" ]; then #Must be single ended
 
-	# Next we want to perform the trimming
-	leeHomMulti --ancientdna -f $ada1 -s $ada2 --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fq2 $r2 -fqo ${out}Trimmed/${sample} 2> /dev/null
+		leeHomMulti --ancientdna -f /opt/local/trimmomatic/adapters/TruSeq3-SE.fa --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fqo ${out}Trimmed/${sample} 2> /dev/null
+
+	else # It's paired
+
+		# First step is to identify the Adapters
+		/opt/local/AdapterRemoval/AdapterRemoval --identify-adapters --file1 $r1 --file2 $r2 > tmp.out 2> /dev/null
+		ada1=$(grep "adapter1" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
+		ada2=$(grep "adapter2" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
+	
+		# Next we want to perform the trimming
+		leeHomMulti --ancientdna -f $ada1 -s $ada2 --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fq2 $r2 -fqo ${out}Trimmed/${sample} 2> /dev/null
+	fi
 
 }
 ProgressBar() { # From github.com/fearside/ProgressBar
