@@ -246,9 +246,16 @@ rm -rf IntGzip
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup/
-mkdir -p ${out}prinseqLog
-echo "String Deduplciation with prinseq"
-parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null" ::: ${out}FastaOnly/*
+
+if [[ "${blast}" == "blastp" ]]; then
+	echo "BlastP requested.  String deduplication won't be performed"
+	cp ${out}FastaOnly/* ${out}StringDedup/
+else
+
+	mkdir -p ${out}prinseqLog
+	echo "String Deduplciation with prinseq"
+	parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null" ::: ${out}FastaOnly/*
+fi
 
 # The final step is to test if StringDeduplication will occur
 if [[ $subsample != 0 ]]; then

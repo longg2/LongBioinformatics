@@ -6,8 +6,8 @@ usage() { printf 'BWA aln Mapping V1.1
 	Mapping using aln is more complicated than it warrants,
 	so here is a useful wrapper that will hopefully make life
 	easier.
-
 	V1.1 -> Multimappers Separated
+
 	-i\tThe folder the fasta files (REQUIRED)
 	-o\tOutput folder of the BAM files (Default: BWAMappingScript)
 	-r\tThe BWA index.  Will be mapping reads against it (REQUIRED)
@@ -96,13 +96,11 @@ DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	#echo "$array"
 	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%%_*}); echo ${tmp/%.f*}; done) # Getting only the sample names
-	#local sampleNames=$(for name in ${array[@]}; do tmp=$(echo ${name/%_*});echo ${tmp/%.f*}; done) # Getting only the sample names
-
 	local sampleNames=$(for name in ${array[@]}; do
-		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e "s/.fa.*//I")";
+		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e "s/_merged.*//I" -e "s/\.fa.*//I" -e "s/\.fn.*//I")";
 		echo $tmp;
        	done) # Getting only the sample names
-	#local sampleNames=$(for tmp in ${array[@]}; do tmp=$(echo ${tmp/_r1}); tmp=$(echo ${tmp/_r2}); tmp=$(echo ${tmp/_merged}); tmp=$(echo ${tmp/_Merged});echo ${tmp/%.f*}; done) # Getting only the sample tmps
+	#local sampleNames=$(for tmp in ${array[@]}; do tmp=$(echo ${tmp/_r1}); tmp=$(echo ${tmp/_r2}); tmp=$(echo ${tmp/_merged});echo ${tmp/%.f*}; done) # Getting only the sample tmps
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
 
 }
@@ -122,13 +120,13 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 	printf '%s\n' "${sampleFiles[@]}" > .hiddenlist.list
 
 	# Identifying the files
-	if grep -P -i -q "r1" .hiddenlist.list; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
+	if grep -P -i -q "_r1" .hiddenlist.list; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i '_r1')
 	        r1="$folder/$fileName"
 	fi
 
-	if grep -P -i -q "r2" .hiddenlist.list; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2')
+	if grep -P -i -q "_r2" .hiddenlist.list; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i '_r2')
 	        r2="$folder/$fileName"
 	fi
 
@@ -154,18 +152,18 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $merged -t $ncores > tmp.sai
 	
 		bwa samse $ref tmp.sai $merged |\
-			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam |\
+			samtools view -b -h -F 4 -m $len -q $qual -U tmpMBad.bam |\
 			samtools sort -	> tmpM.bam  
 	
 		# Now to figure out if Multimappers are to be extracted
 		if [ "$multi" != "TRUE" ]; then
-			samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
+			samtools fastq tmpMBad.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
 
 		else
 			# Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
-			samtools fastq -f 4 tmp.bam | gzip > tmpUnmapped.fastq.gz #${out}UnmappedReads/${sample}.fastq.gz # All the unmapped Reads
-			samtools view -F 4 tmp.bam | awk '{if($5 > 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip -c | cat tmpUnmapped.fastq.gz -  > ${out}UnmappedReads/${sample}.fastq.gz # The reads which were poor matches 
-			samtools view -F 4 tmp.bam | awk '{if($5 == 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip > ${out}Qual0Reads/${sample}.fastq.gz # The Multimappers
+			samtools fastq -f 4 tmpMBad.bam | gzip > tmpUnmapped.fastq.gz #${out}UnmappedReads/${sample}.fastq.gz # All the unmapped Reads
+			samtools view -F 4 tmpMBad.bam | awk '{if($5 > 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip -c | cat tmpUnmapped.fastq.gz -  > ${out}UnmappedReads/${sample}.fastq.gz # The reads which were poor matches 
+			samtools view -m $len -F 4 tmpMBad.bam | awk '{if($5 == 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip > ${out}Qual0Reads/${sample}.fastq.gz # The Multimappers
 		fi
 	fi
 	
@@ -175,21 +173,21 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $r2 -t $ncores  > tmp2.sai # Second Index
 	
 		bwa sampe $ref tmp1.sai tmp2.sai $r1 $r2  |\
-			samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam |\
+			samtools view -b -h -F 4 -m $len -q $qual -U tmpPBad.bam |\
 		       	samtools sort - > tmpP.bam 
 		
 		if [ "$multi" != "TRUE" ]; then
-			samtools fastq -c 6 tmp.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 
+			samtools fastq -c 6 tmpPBad.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 
 
 		else
 			# Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
-			samtools fastq -f 4 -c 6 tmp.bam -1 tmpUnmapped_r1.fastq.gz -2 tmpUnmapped_r1.fastq.gz -s /dev/null # All the unmapped Reads
+			samtools fastq -f 4 -c 6 tmpPBad.bam -1 tmpUnmapped_r1.fastq.gz -2 tmpUnmapped_r2.fastq.gz -s /dev/null # All the unmapped Reads
 			# R1 reads
-			samtools view -F 4 tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip -c | cat tmpUnmapped_r1.fastq.gz - > ${out}UnmappedReads/${sample}_r1.fastq.gz # The reads which were poor matches
-			samtools view -F 4 tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r1.fastq.gz # The Multimappers
+			samtools view -F 4 tmpPBad.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip -c | cat tmpUnmapped_r1.fastq.gz - > ${out}UnmappedReads/${sample}_r1.fastq.gz # The reads which were poor matches
+			samtools view -m $len -F 4 tmpPBad.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r1.fastq.gz # The Multimappers
 			## R2 reads
-			samtools view -F 4 tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip -c | cat tmpUnmapped_r2.fastq.gz - > ${out}UnmappedReads/${sample}_r2.fastq.gz
-			samtools view -F 4 tmp.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r2.fastq.gz # The Multimappers
+			samtools view -F 4 tmpPBad.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip -c | cat tmpUnmapped_r2.fastq.gz - > ${out}UnmappedReads/${sample}_r2.fastq.gz
+			samtools view -m $len -F 4 tmpPBad.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r2.fastq.gz # The Multimappers
 		fi
 	
 	fi
@@ -199,14 +197,17 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ]; then
 		#echo "MERGED and PAIRED"
 		samtools merge -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam
-		rm tmpP.bam tmpM.bam  
+		samtools merge -f ${out}UnmappedBam/$sample.bam tmpMBad.bam tmpPBad.bam
+		rm tmpP* tmpM*
 	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 		#echo "MERGED"
 		mv tmpM.bam ${out}MappedReads/$sample.bam 
+		mv tmpMBad.bam ${out}UnmappedReads/$sample.bam 
 	else
 		#echo "PAIRED"
 		mv tmpP.bam ${out}MappedReads/$sample.bam
+		mv tmpPBad.bam ${out}UnmappedReads/$sample.bam 
 	fi
 
 	# Deleting temporary files
@@ -289,6 +290,7 @@ done
 # Testing if files options are missing
 if [ -z ${folder+x} ] || [ -z ${ref+x} ]; then
 	echo "You are missing either the Input folder or the reference"
+	usage
 	exit 1
 fi
 
@@ -301,7 +303,8 @@ log | tee $log # The inital log file
 # The Folders
 mkdir -p ${out}MappedReads
 mkdir -p ${out}UnmappedReads 
-mkdir -p ${out}Qual0Reads 
+mkdir -p ${out}UnmappedBam 
+[ "${multi}" == "TRUE" ] && mkdir -p ${out}Qual0Reads 
 mkdir -p ${out}BWALogs
 [ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 

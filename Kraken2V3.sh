@@ -130,8 +130,14 @@ KrakenAnalysis(){ # This here will do the heavy lifting for the script
 			--classified-out ${out}Class/${sample}Merged.fastq --unclassified-out ${out}Unclass/${sample}Merged.fastq \
 		       --use-names $merged --output ${out}Output/${sample}Merged.out --confidence 0.1
 	fi
+
+	if [[ "$r1" != "NA" && "$r2" == "NA" ]]; then # If dealing with a single end library
+		kraken2 --db $db --threads $ncores --report ${out}Reports/${sample}Single.tab \
+			--classified-out ${out}Class/${sample}Single.fastq --unclassified-out ${out}Unclass/${sample}Single.fastq \
+		       --use-names $r1 --output ${out}Output/${sample}Single.out --confidence 0.1
+	fi 
 	
-	if [ "$r1" != "NA" ]; then # If I found a merged file
+	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If paired
 		kraken2 --db $db --threads $ncores --report ${out}Reports/${sample}Paired.tab \
 			--classified-out ${out}Class/${sample}Paired.fastq --unclassified-out ${out}Unclass/${sample}Paired.fastq \
 		       --use-names $r1 --output ${out}Output/${sample}Paired.out --confidence 0.1
@@ -150,7 +156,13 @@ TaxaExtraction(){ # If requested, we need to get the reads which mapped against 
 			-s $merged
 	fi
 
-	if [ "$r1" != "NA" ]; then # If I found a merged file
+	if [[ "$r1" != "NA" && "$r2" == "NA" ]]; then # If dealing with a single end library
+		extract_kraken_reads.py -k ${out}Output/${sample}Single.out -r ${out}Reports/${sample}Single.tab \
+			-o ${out}TaxaInterest/${sample}_single.fastq -t $taxa2 --include-children --fastq-output \
+			-s $r1
+	fi 
+
+	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If paired
 			extract_kraken_reads.py -k ${out}Output/${sample}Paired.out -r ${out}Reports/${sample}Paired.tab \
 				-o ${out}TaxaInterest/${sample}_r1.fastq -o2 ${out}TaxaInterest/${sample}_r2.fastq \
 			       	-t $taxa2 --include-children --fastq-output \
@@ -167,11 +179,28 @@ StringDeduplication(){ # Convenient Wrapper for parallelization
 	
 	# Now for the actual deduplication
 	if [ "$merged" != "NA" ]; then # If I found a merged file
-		prinseq -fastq $merged -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $merged -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz
+		else
+			prinseq -fastq $merged -out_bad null -out_good stdout -min_len $len -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz
+		fi
 	fi
 
-	if [ "$r1" != "NA" ]; then # If I found a paired file
-		prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+	if [[ $r1 != "NA" && $r2 == "NA" ]]; then # If dealing with a single end library
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $r1 -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_r1.fastq.gz
+		else
+			prinseq -fastq $r1 -out_bad null -out_good stdout -min_len $len -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_r1.fastq.gz
+		fi
+	fi 
+
+	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If paired
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+		else
+			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+
+		fi
 
 	# Because of how prinseq is coded, I'll need to compress separately	
 		gzip -c TMP/${sample}_1.fastq > ${out}StringDedup/${sample}_r1.fastq.gz
@@ -195,11 +224,12 @@ usage() { printf 'Kraken2 Wrapper Script V0.75
 	Will pipe Kraken2 to the correct folders and create Krona plots.
         -i\tWhere the sequences are
 	-o\tOutput Prefix (Default = Kraken2)
-	-d\tKraken2 Database
+	-r\tKraken2 Database
 	-n\tNumber of CPU Threads to be used (Default = 8)
 	-l\tLog File Name
 	-k\tMinimum Fragment Length (Default = 30)
 	-t\tTaxa Being Extracted (Comma Separated list)? (Default = NONE)
+	-d\tString Deduplication? (Default = FALSE)
         -h\tShow this help message and exit\n' 1>&2; exit 0; }
 log() {	printf "Kraken settings for $(date):
 	Log File:\t${log}
@@ -227,14 +257,15 @@ log="$(date +'%Y%m%d').log"
 declare -i ncores=8
 export out="Kraken2"
 taxa="NULL"
-while getopts "i:d:n:o:l:t:k:h" arg; do
+Dedup="FALSE"
+while getopts "i:r:n:o:l:t:k:hd" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}
 			declare -r files=$(find $folder/* -type f -printf "%f\n") # Making an array of files
                         #echo "The raw sequencing files are located in $in"
                         ;;
-                d)
+                r)
                         declare -r db=${OPTARG}
 			#export $db
                         #echo "Using the Kraken2 database at $db"
@@ -257,6 +288,9 @@ while getopts "i:d:n:o:l:t:k:h" arg; do
 			;;
 		t)
 			taxa=${OPTARG}
+			;;
+		d)
+			Dedup="TRUE"
 			;;
                 h | *)
                         usage
@@ -308,10 +342,11 @@ count=0
 ProgressBar $count $total
 for sample in ${samples[@]}
 do
-	StringDeduplication $sample IntGzip $len 2> /dev/null
+	StringDeduplication $sample IntGzip $len
 	count=$(echo "$count + 1" | bc)
 	ProgressBar $count $total
 done
+printf "\n"
 #parallel -j $ncores --bar "StringDeduplication {} IntGzip $len" ::: "${samples[@]}" # DOESN'T WORK!!
 rm -rf TMP
 rm -rf IntGzip
@@ -332,7 +367,7 @@ done
 
 echo "Combining the Merged and Paired Reports and preparing for a Krona plot"
 parallel --bar -j $ncores "combine_kreports.py -r ${out}Reports/{}*tab --only-combined --no-header -o ${out}CombinedReports/{}.tab > /dev/null 2> /dev/null; kreport2krona.py -r ${out}CombinedReports/{}.tab -o ${out}Krona/{}.txt" ::: "${samples[@]}"
-#ktImportText -o ${outPrefix}Krona.html ${outPrefix}Krona/* # making the KronaPlot
+ktImportText -o ${outPrefix}Krona.html ${outPrefix}Krona/* # making the KronaPlot
 #
 ## If requested, we want to also pull out the taxa of interest
 if [ $taxa != "NULL" ];then

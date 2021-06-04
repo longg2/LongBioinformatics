@@ -23,13 +23,13 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 	printf '%s\n' "${sampleFiles[@]}" > .hiddenlist.list
 
 	# Identifying the files
-	if grep -P -i -q "r1" .hiddenlist.list; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
+	if grep -P -i -q "_r1" .hiddenlist.list; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i '_r1')
 	        r1="$folder/$fileName"
 	fi
 
-	if grep -P -i -q "r2" .hiddenlist.list; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2')
+	if grep -P -i -q "_r2" .hiddenlist.list; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i '_r2')
 	        r2="$folder/$fileName"
 	fi
 
@@ -52,24 +52,41 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 Trimming(){ # Performing the trimming
 	# Trimming
 	local r1=$1
-	local r2=$1
+	local r2=$2
 	local sample=$3
 	local out=$4
-        fastp -i $r1 -I $r2 --merge \
-        --merged_out ${out}Trimmed/${sample}_merged.fastq.gz \
-	--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
-	--out2 ${out}Trimmed/${sample}_r2.fastq.gz \
-        --adapter_fasta /usr/local/trimmomatic/adapters/TruSeq3-PE-2.fa --correction \
-        --cut_right --cut_right_window_size 4 --cut_right_mean_quality 15\
-        --cut_front --cut_front_window_size 1 --cut_front_mean_quality 3\
-        --cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
-        --overlap_diff_limit 100 --n_base_limit 0\
-        --overlap_len_require 15 --length_required $len\
-        --html ${out}FastpLogs/${sample}.html \
-        --json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
-        --unpaired1 ${out}Trimmed/${sample}_u1.fastq.gz \
-        --unpaired2 ${out}Trimmed/${sample}_u2.fastq.gz\
-        --failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
+
+	if [ "$r2" == "NA" ]; then # If not a paired sample...
+		echo "$sample is a SE sample"
+        	fastp -i $r1 \
+		--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
+        	--adapter_fasta /usr/local-centos6/trimmomatic/adapters/TruSeq3-PE-2.fa --correction \
+        	--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15\
+        	--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3\
+        	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
+        	--n_base_limit 0\
+        	--length_required $len\
+        	--html ${out}FastpLogs/${sample}.html \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
+        	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
+	else
+		echo "$sample is a PE sample"
+        	fastp -i $r1 -I $r2 --merge \
+        	--merged_out ${out}Trimmed/${sample}_merged.fastq.gz \
+		--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
+		--out2 ${out}Trimmed/${sample}_r2.fastq.gz \
+        	--adapter_fasta /usr/local-centos6/trimmomatic/adapters/TruSeq3-PE-2.fa --correction \
+        	--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15\
+        	--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3\
+        	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
+        	--overlap_diff_limit 100 --n_base_limit 0\
+        	--overlap_len_require 15 --length_required $len\
+        	--html ${out}FastpLogs/${sample}.html \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
+        	--unpaired1 ${out}Trimmed/${sample}_u1.fastq.gz \
+        	--unpaired2 ${out}Trimmed/${sample}_u2.fastq.gz\
+        	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
+	fi
 }
 
 FastpWrapper(){ # Convenient Wrapper for parallelization
@@ -127,7 +144,7 @@ log() {	printf "Mapping settings for $(date):
 	-------------------------------------\n"; exit 0;
 }
 
-#export -f Trimming
+export -f Trimming
 
 #Default Values
 out="ModernQC"
@@ -170,7 +187,6 @@ while getopts "i:k:n:o:l:hd" arg; do
                         ;;
         esac
 done
-logBWA="${log/%.*}BWA.log"
 
 # Writing the Log File
 log | tee $log
@@ -184,6 +200,7 @@ DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable 
 mkdir -p ${out}Trimmed
 mkdir -p ${out}FastpLogs
 mkdir -p ${out}FailedQC
+mkdir -p ${out}FastpLogNorm
 echo "Trimming and Merging Reads"
 
 njobs=$(echo "scale=0;var1=$ncores/16;var1"|bc) # Will round down!!!
@@ -191,26 +208,32 @@ njobs=$(echo "scale=0;var1=$ncores/16;var1"|bc) # Will round down!!!
 for sample in ${samples[@]}; do
 	FileIdentification $sample
 	FileExtraction
-	sem -j $njobs "Trimming $r1 $r2 $sample $out" > /dev/null 2> /dev/null
+	printf "R1:\t$r1\nR2:\t$r2\nSample:\t$sample\nOut:\t$out\n"
+	sem -j $njobs "Trimming $r1 $r2 $sample $out" 2> ${out}FastpLogNorm/$sample.log
 done
 
 ###################
 ###Pooling Lanes###
 ###################
 
-#mkdir -p ${out}PooledLanes
-#echo "Pooling Lanes"
-	
+mkdir -p ${out}PooledLanes
 pooledNames=$(for name in ${samples[@]}; do # This was lifted from DeduplicateArray().
 	tmp="$(echo $name |sed -e 's/_L00.*//I')";
 		echo $tmp;
        	done) # Getting only the sample names
 pooledNames=( $(echo ${pooledNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') ) # This was lifted from Deduplicate Array
+#echo $pooledNames
+
+printf "\nPooling the lanes together\n"
+#parallel --bar -j $ncores "cat ${out}Trimmed/{}_L00{1,2}_merged.fq.gz > ${out}PooledLanes/{}.fastq.gz 2> /dev/null;
+#	cat ${out}Trimmed/{}_L00{1,2}_r1.fq.gz > ${out}PooledLanes/{}_r1.fastq.gz;
+#	cat ${out}Trimmed/{}_L00{1,2}_r2.fq.gz > ${out}PooledLanes/{}_r2.fastq.gz;" ::: "${pooledNames[@]}" # The 2> is included as we won't have two lanes all the time.  Want to hide these errors if that is the case since it's working as intended.  Need a better way to do it....
 
 parallel --bar -j $ncores "cat ${out}Trimmed/{}*merged.fastq.gz > ${out}PooledLanes/{}.fastq.gz;
 	cat ${out}Trimmed/{}*r1.fastq.gz > ${out}PooledLanes/{}_r1.fastq.gz;
 	cat ${out}Trimmed/{}*r2.fastq.gz > ${out}PooledLanes/{}_r2.fastq.gz;" ::: "${pooledNames[@]}" # "${samples[@]}"
 
+find ${out}PooledLanes -type f -empty -exec rm {} \;
 ####################################
 ### Running String Deduplication ###
 ####################################
