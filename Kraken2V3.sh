@@ -100,7 +100,7 @@ DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 
 	local sampleNames=$(for name in ${array[@]}; do
-		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I')";
+		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fq.*//I' -e 's/\.fa.*//I')";
 		echo $tmp;
        	done) # Getting only the sample names
 	samples=( $(echo ${sampleNames[@]} | tr ' ' '\n' | uniq | tr '\n' ' ') )
@@ -176,7 +176,7 @@ StringDeduplication(){ # Convenient Wrapper for parallelization
 	local len=$3
 	FileIdentificationInFunction $sample $folderFunction
 	FileExtractionInFunction $folderFunction
-	
+
 	# Now for the actual deduplication
 	if [ "$merged" != "NA" ]; then # If I found a merged file
 		if [ "$Dedup" == "TRUE" ]; then
@@ -187,6 +187,7 @@ StringDeduplication(){ # Convenient Wrapper for parallelization
 	fi
 
 	if [[ $r1 != "NA" && $r2 == "NA" ]]; then # If dealing with a single end library
+		echo "Single"
 		if [ "$Dedup" == "TRUE" ]; then
 			prinseq -fastq $r1 -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_r1.fastq.gz
 		else
@@ -203,6 +204,45 @@ StringDeduplication(){ # Convenient Wrapper for parallelization
 		fi
 
 	# Because of how prinseq is coded, I'll need to compress separately	
+		gzip -c TMP/${sample}_1.fastq > ${out}StringDedup/${sample}_r1.fastq.gz
+		gzip -c TMP/${sample}_2.fastq > ${out}StringDedup/${sample}_r2.fastq.gz
+
+	fi
+}
+StringDeduplicationParallel(){ # Convenient Wrapper for parallelization
+	local sample=$1
+	local folderFunction=$2
+	local len=$3
+	FileIdentificationInFunction $sample $folderFunction
+	FileExtractionInFunction $folderFunction
+
+	# Now for the actual deduplication
+	if [ "$merged" != "NA" ]; then # If I found a merged file
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $merged -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 
+		else
+			prinseq -fastq $merged -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20
+		fi
+	fi
+
+	if [[ $r1 != "NA" && $r2 == "NA" ]]; then # If dealing with a single end library
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $r1 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 
+		else
+			prinseq -fastq $r1 -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 
+		fi
+	fi 
+
+	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If paired
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+		else
+			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+
+		fi
+
+	# Because of how prinseq is coded, I'll need to compress separately	
+		gzip -c TMP/${sample}.fastq > ${out}StringDedup/${sample}.fastq.gz
 		gzip -c TMP/${sample}_1.fastq > ${out}StringDedup/${sample}_r1.fastq.gz
 		gzip -c TMP/${sample}_2.fastq > ${out}StringDedup/${sample}_r2.fastq.gz
 
@@ -249,6 +289,7 @@ export -f FileIdentificationInFunction
 export -f FileExtractionInFunction
 export -f FileExtraction
 export -f StringDeduplication
+export -f StringDeduplicationParallel
 export -f KrakenAnalysis
 export -f TaxaExtraction
 
@@ -321,15 +362,15 @@ mkdir -p ${out}KrakenLog
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
 # We need to determine if the file is gzipped
-echo "Decompressing the files"
-mkdir -p IntGzip
-if [ $ncores > 30  ];
-then
-	#Preventing an accidental swamping of the cluster
-	parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
-else
-	parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
-fi
+#echo "Decompressing the files"
+#mkdir -p IntGzip
+#if [ $ncores > 30  ];
+#then
+#	#Preventing an accidental swamping of the cluster
+#	parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
+#else
+#	parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+#fi
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup
@@ -347,9 +388,9 @@ do
 	ProgressBar $count $total
 done
 printf "\n"
-#parallel -j $ncores --bar "StringDeduplication {} IntGzip $len" ::: "${samples[@]}" # DOESN'T WORK!!
+#parallel -j $ncores --bar "StringDeduplicationParallel {} IntGzip $len" ::: "${samples[@]}" # DOESN'T WORK!!
 rm -rf TMP
-rm -rf IntGzip
+#rm -rf IntGzip
 
 # Now for the Kraken Loop
 echo "Running Kraken2 on ${#samples[@]} samples"

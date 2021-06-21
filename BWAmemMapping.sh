@@ -171,7 +171,7 @@ memMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	
 	# Merging the files if needed.  Otherwise, we can ignore and simply mv it
 	#if [ -v merged ] && [ -v r1 ]; then
-	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ]; then
+	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
 		samtools merge -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam 
 		rm tmpP.bam tmpM.bam 
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" == "NA" ]; then
