@@ -59,7 +59,8 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 AncientTrimming(){ # This uses a combination leeHom and AdapterRemoval
 
 	if [ "$r2" == "NA" ]; then #Must be single ended
-		leeHomMulti --ancientdna -f /opt/local/trimmomatic/adapters/TruSeq3-SE.fa --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fqo ${out}Trimmed/${sample} 2> /dev/null
+		leeHomMulti --ancientdna --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fqo ${out}Trimmed/${sample} 2> /dev/null # Don't like this as it is hardcoded....  Will it improve my issue though?
+		#leeHomMulti --ancientdna -f /opt/local/trimmomatic/adapters/TruSeq3-SE.fa --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fqo ${out}Trimmed/${sample} 2> /dev/null
 
 	else # It's paired
 

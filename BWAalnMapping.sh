@@ -222,15 +222,15 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 		#echo "MERGED"
 		mv tmpM.bam ${out}MappedReads/$sample.bam 
-		mv tmpMBad.bam ${out}UnmappedReads/$sample.bam 
+		mv tmpMBad.bam ${out}UnmappedBam/$sample.bam 
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 		mv tmpS.bam  ${out}MappedReads/$sample.bam 
-		mv tmpSBad.bam ${out}UnmappedReads/$sample.bam 
+		mv tmpSBad.bam ${out}UnmappedBam/$sample.bam 
 	else
 		#echo "PAIRED"
 		mv tmpP.bam ${out}MappedReads/$sample.bam
-		mv tmpPBad.bam ${out}UnmappedReads/$sample.bam 
+		mv tmpPBad.bam ${out}UnmappedBam/$sample.bam 
 	fi
 
 	# Deleting temporary files

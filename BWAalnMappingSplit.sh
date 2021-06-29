@@ -97,24 +97,21 @@ SplitAlnMapping(){ # BWA aln Mapping.  Split ALN mapping is a different beast. W
 	local ncores=$2
 	local jobNum=$3
 
-	if [ "$merged" != "NA" ]; then # If I found a merged file
-	#if [ -v merged ]; then # If I found a merged file
-		bwa aln -o 2 -n 0.01 -l 16500 $ref $merged -t $ncores > tmp_$jobNumb.sai
-	
-		bwa samse $ref tmp.sai $merged |\
-			samtools view -b -h -F 4 -m $len -q $qual -U tmpMBad_$jobNumb.bam |\
-			samtools sort -	> TMPBAM/tmpM_$jobNumb.bam  
-	
-		# Now to figure out if Multimappers are to be extracted
-		if [ "$multi" != "TRUE" ]; then
-			samtools fastq tmpMBad_$jobNumb.bam | gzip > TMPUNMAPPED/${sample}_$jobNumb.fastq.gz
+	bwa aln -o 2 -n 0.01 -l 16500 $ref $merged -t $ncores > tmp_$jobNumb.sai
 
-		else
-			# Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
-			samtools fastq -f 4 tmpMBad_$jobNumb.bam | gzip > tmpUnmapped_$jobNumb.fastq.gz #${out}UnmappedReads/${sample}.fastq.gz # All the unmapped Reads
-			samtools view -F 4 tmpMBad_$jobNumb.bam | awk '{if($5 > 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip -c | cat tmpUnmapped_$jobNumb.fastq.gz -  > TMPUNMAPPED/${sample}_$jobNumb.fastq.gz # The reads which were poor matches 
-			samtools view -m $len -F 4 tmpMBad.bam | awk '{if($5 == 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip > TMPQUAL0/${sample}_$jobNumb.fastq.gz # The Multimappers
-		fi
+	bwa samse $ref tmp.sai $merged |\
+		samtools view -b -h -F 4 -m $len -q $qual -U tmpMBad_$jobNumb.bam |\
+		samtools sort -	> TMPBAM/tmpM_$jobNumb.bam  
+
+	# Now to figure out if Multimappers are to be extracted
+	if [ "$multi" != "TRUE" ]; then
+		samtools fastq tmpMBad_$jobNumb.bam | gzip > TMPUNMAPPED/${sample}_$jobNumb.fastq.gz
+
+	else
+		# Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
+		samtools fastq -f 4 tmpMBad_$jobNumb.bam | gzip > tmpUnmapped_$jobNumb.fastq.gz #${out}UnmappedReads/${sample}.fastq.gz # All the unmapped Reads
+		samtools view -F 4 tmpMBad_$jobNumb.bam | awk '{if($5 > 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip -c | cat tmpUnmapped_$jobNumb.fastq.gz -  > TMPUNMAPPED/${sample}_$jobNumb.fastq.gz # The reads which were poor matches 
+		samtools view -m $len -F 4 tmpMBad.bam | awk '{if($5 == 0){print "@"$1"\n"$10"\n+\n"$11}}' | gzip > TMPQUAL0/${sample}_$jobNumb.fastq.gz # The Multimappers
 	fi
 	
 }
@@ -130,6 +127,8 @@ ProgressBar() { # From github.com/fearside/ProgressBar
 	printf "\rProgress : [${_done// />}${_left// /-}] ${_progress}%%"
 
 }	
+
+export -f SplitAlnMapping
 
 ######################
 ### Default values ###
@@ -212,6 +211,9 @@ mkdir -p ${out}UnmappedBam
 mkdir -p ${out}BWALogs
 [ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 
+# Exporting needed functions
+export ref
+
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 #echo ${samples[@]}
 
@@ -230,17 +232,15 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 #	printf "\nMERGED:$merged\nR1:$r1\nR2:$r2\n" #| tee -a $log # Debugging only
 	
 	# Now to split the file into 1M reads
-	seqkit split2 -s 1M -1 $merged -O SplitFiles -j $ncores 2> /dev/null # Only informing that the split is occuring
-	export parThreads=(($ncores/3))
-	export $sample
-	echo $parThreads
+	#seqkit split2 -s 1000000 -j $ncores -O SplitFiles -1 $merged  #2> /dev/null # Only informing that the split is occuring
+	export parThreads=$(( $ncores/3 ))
+	export sample
 
 	# Making Temporary folders
 	mkdir -p TMPBAM
 	mkdir -p TMPUNMAPPED
 	[ "${multi}" == "TRUE" ] && mkdir -p TMPQUAL0
 
-	sleep 10
 	# Now to do the mapping
 	parallel -j 3 --bar "SplitAlnMapping {} $parThreads {#} 2> ${out}BWALogs/{/.}.log" ::: SplitFiles/*
 
@@ -250,7 +250,7 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	[ "${multi}" == "TRUE" ] && cat TMPQUAL0/*.gz ${out}Qual0Reads/$sample.fastq.gz
 
 	# A simple counter
-	rm -rf SplitFiles TMPBAM TMPUNMAPPED
+	#rm -rf SplitFiles TMPBAM TMPUNMAPPED
 	[ "${multi}" == "TRUE" ] && rm -rf TMPQUAL0
 	count=$(echo "$count + 1" | bc)
 	ProgressBar $count $total

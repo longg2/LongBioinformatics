@@ -408,7 +408,7 @@ done
 
 echo "Combining the Merged and Paired Reports and preparing for a Krona plot"
 parallel --bar -j $ncores "combine_kreports.py -r ${out}Reports/{}*tab --only-combined --no-header -o ${out}CombinedReports/{}.tab > /dev/null 2> /dev/null; kreport2krona.py -r ${out}CombinedReports/{}.tab -o ${out}Krona/{}.txt" ::: "${samples[@]}"
-ktImportText -o ${outPrefix}Krona.html ${outPrefix}Krona/* # making the KronaPlot
+ktImportText -o KronaPlot.html ${outPrefix}Krona/* # making the KronaPlot
 #
 ## If requested, we want to also pull out the taxa of interest
 if [ $taxa != "NULL" ];then
