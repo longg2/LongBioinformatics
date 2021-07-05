@@ -1,8 +1,11 @@
 #! /usr/bin/env bash
 
 # Getting the commands I neeed
-source lib/BasicCommands.sh # This loads the basic things I need.
-source lib/QCFunctions.sh # This loads the QC commands
+script_name=$0
+script_full_path=$(dirname $0)
+
+source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
+source $script_full_path/lib/QCFunctions.sh # This loads the QC commands
 #DeduplicateArray(){ # Deduplicating the sample names
 #	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 #	local sampleNames=$(for name in ${array[@]}; do

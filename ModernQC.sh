@@ -1,7 +1,10 @@
 #! /usr/bin/env bash
 # These are the functions that actually do the work.  Mean to make parallelization easier to do
-source lib/BasicCommands.sh # This loads the basic things I need.
-source lib/QCFunctions.sh # This loads the QC commands
+script_name=$0
+script_full_path=$(dirname $0)
+
+source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
+source $script_full_path/lib/QCFunctions.sh # This loads the QC commands
 #FileIdentification(){ # Extract Files from an array using results from another array
 #	local sample=$1 # Basename of the file
 #	local arrayFiles=$files

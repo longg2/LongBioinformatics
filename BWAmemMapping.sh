@@ -2,8 +2,11 @@
 ######################################
 ### Functions that I'll be calling ###
 ######################################
-source lib/BasicCommands.sh # The basics
-source lib/MappingFunctions.sh # Contains mem and aln mapping code
+script_name=$0
+script_full_path=$(dirname $0)
+
+source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
+source $script_full_path/lib/MappingFunctions.sh # Contains mem and aln mapping code
 
 usage() { printf 'BWA mem Mapping V1
 	BWA MEM mapping.  Much simpler than with BWA aln, but, a wrapper

@@ -2,9 +2,11 @@
 ######################################
 ### Functions that I'll be calling ###
 ######################################
+script_name=$0
+script_full_path=$(dirname $0)
 
-source lib/BasicCommands.sh # Basics
-source lib/MappingFunctions.sh # The mapping functions
+source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
+source $script_full_path/lib/MappingFunctions.sh # The mapping functions
 usage() { printf 'BWA aln Mapping V1.1
 	Mapping using aln is more complicated than it warrants,
 	so here is a useful wrapper that will hopefully make life
