@@ -1,5 +1,8 @@
 #! /usr/bin/env bash
 
+########################
+### Ancient Trimming ###
+########################
 AncientTrimming(){ # This uses a combination leeHom and AdapterRemoval
 
 	if [ "$r2" == "NA" ]; then #Must be single ended
@@ -18,18 +21,9 @@ AncientTrimming(){ # This uses a combination leeHom and AdapterRemoval
 	fi
 
 }
-ProgressBar() { # From github.com/fearside/ProgressBar
-	# Process data
-		let _progress=(${1}*100/${2}*100)/100
-		let _done=(${_progress}*4)/10
-		let _left=40-$_done
-	# Build progressbar string lengths
-	_done=$(printf "%${_done}s")
-	_left=$(printf "%${_left}s")
-	printf "\rProgress : [${_done// />}${_left// /-}] ${_progress}%%"
-
-}	
-
+#######################
+### Modern Trimming ###
+#######################
 Trimming(){ # Performing the trimming
 	# Trimming
 	local r1=$1
@@ -76,3 +70,83 @@ FastpWrapper(){ # Convenient Wrapper for parallelization
 	Trimming
 }
 
+
+# String Deduplication Commands.  Parallelization may or may not work
+StringDeduplication(){ 
+	local sample=$1
+	local folderFunction=$2
+	local len=$3
+	FileIdentificationInFunction $sample $folderFunction
+	FileExtractionInFunction $folderFunction
+
+	# Now for the actual deduplication
+	if [ "$merged" != "NA" ]; then # If I found a merged file
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $merged -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz
+		else
+			prinseq -fastq $merged -out_bad null -out_good stdout -min_len $len -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz
+		fi
+	fi
+
+	if [[ $r1 != "NA" && $r2 == "NA" ]]; then # If dealing with a single end library
+		echo "Single"
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $r1 -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_r1.fastq.gz
+		else
+			prinseq -fastq $r1 -out_bad null -out_good stdout -min_len $len -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_r1.fastq.gz
+		fi
+	fi 
+
+	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If paired
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+		else
+			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+
+		fi
+
+	# Because of how prinseq is coded, I'll need to compress separately	
+		gzip -c TMP/${sample}_1.fastq > ${out}StringDedup/${sample}_r1.fastq.gz
+		gzip -c TMP/${sample}_2.fastq > ${out}StringDedup/${sample}_r2.fastq.gz
+
+	fi
+}
+StringDeduplicationParallel(){
+	local sample=$1
+	local folderFunction=$2
+	local len=$3
+	FileIdentificationInFunction $sample $folderFunction
+	FileExtractionInFunction $folderFunction
+
+	# Now for the actual deduplication
+	if [ "$merged" != "NA" ]; then # If I found a merged file
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $merged -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 
+		else
+			prinseq -fastq $merged -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20
+		fi
+	fi
+
+	if [[ $r1 != "NA" && $r2 == "NA" ]]; then # If dealing with a single end library
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $r1 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 
+		else
+			prinseq -fastq $r1 -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 
+		fi
+	fi 
+
+	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If paired
+		if [ "$Dedup" == "TRUE" ]; then
+			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+		else
+			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+
+		fi
+
+	# Because of how prinseq is coded, I'll need to compress separately	
+		gzip -c TMP/${sample}.fastq > ${out}StringDedup/${sample}.fastq.gz
+		gzip -c TMP/${sample}_1.fastq > ${out}StringDedup/${sample}_r1.fastq.gz
+		gzip -c TMP/${sample}_2.fastq > ${out}StringDedup/${sample}_r2.fastq.gz
+
+	fi
+}
