@@ -1,79 +1,83 @@
 #! /usr/bin/env bash
-# These are the functions that actually do the work.  Mean to make parallelization easier to do
-FileIdentification(){ # Extract Files from an array using results from another array
-	local sample=$1 # Basename of the file
-	local arrayFiles=$files
+script_name=$0
+script_full_path=$(dirname $0)
 
-	# Finding the indices which have the same samplename
-	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
-}
+source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 
-FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
-	# Unsetting variables in case they're already defined from a previous run 
-	# unset merged
-	# unset r1
-	# unset r2
-
-	# This here is a fix that's needed if -v doesn't
-	merged="NA"
-	r1="NA"
-	r2="NA"
-
-	# Creating a hidden text file of file names
-	printf '%s\n' "${sampleFiles[@]}" > .hiddenlist.list
-
-	# Identifying the files
-	if grep -P -i -q "_r1" .hiddenlist.list; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i '_r1')
-	        r1="$folder/$fileName"
-	fi
-
-	if grep -P -i -q "_r2" .hiddenlist.list; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i '_r2')
-	        r2="$folder/$fileName"
-	fi
-
-	# Two cases for the merged.  Want to control for shenanigans
-	if grep -q -i "$sample\.f.*" .hiddenlist.list; then
-	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -v -q "_\.f*") ]; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -i "$sample\.f.*")
-	        merged="$folder/$fileName"
-	fi
-
-	if grep -P -i -q "merged" .hiddenlist.list; then
-	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged") ]; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
-	        merged="$folder/$fileName"
-	fi
-
-	rm .hiddenlist.list
-}
-
-DeduplicateArray(){ # Deduplicating the sample names
-	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
-	local sampleNames=$(for name in ${array[@]}; do
-		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I')";
-		echo $tmp;
-       	done) # Getting only the sample names
-	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
-
-}
+#FileIdentification(){ # Extract Files from an array using results from another array
+#	local sample=$1 # Basename of the file
+#	local arrayFiles=$files
+#
+#	# Finding the indices which have the same samplename
+#	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
+#}
+#
+#FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
+#	# Unsetting variables in case they're already defined from a previous run 
+#	# unset merged
+#	# unset r1
+#	# unset r2
+#
+#	# This here is a fix that's needed if -v doesn't
+#	merged="NA"
+#	r1="NA"
+#	r2="NA"
+#
+#	# Creating a hidden text file of file names
+#	printf '%s\n' "${sampleFiles[@]}" > .hiddenlist.list
+#
+#	# Identifying the files
+#	if grep -P -i -q "_r1" .hiddenlist.list; then
+#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i '_r1')
+#	        r1="$folder/$fileName"
+#	fi
+#
+#	if grep -P -i -q "_r2" .hiddenlist.list; then
+#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i '_r2')
+#	        r2="$folder/$fileName"
+#	fi
+#
+#	# Two cases for the merged.  Want to control for shenanigans
+#	if grep -q -i "$sample\.f.*" .hiddenlist.list; then
+#	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -v -q "_\.f*") ]; then
+#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -i "$sample\.f.*")
+#	        merged="$folder/$fileName"
+#	fi
+#
+#	if grep -P -i -q "merged" .hiddenlist.list; then
+#	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged") ]; then
+#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
+#	        merged="$folder/$fileName"
+#	fi
+#
+#	rm .hiddenlist.list
+#}
+#
+#DeduplicateArray(){ # Deduplicating the sample names
+#	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
+#	local sampleNames=$(for name in ${array[@]}; do
+#		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I')";
+#		echo $tmp;
+#       	done) # Getting only the sample names
+#	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
+#
+#}
 
 SPAdesFunction(){
 	spades --isolate -1 $r1 -2 $r2 --merged $merged -t $ncores -o ${out}/$sample
 }
-
-ProgressBar() { # From github.com/fearside/ProgressBar
-	# Process data
-		let _progress=(${1}*100/${2}*100)/100
-		let _done=(${_progress}*4)/10
-		let _left=40-$_done
-	# Build progressbar string lengths
-	_done=$(printf "%${_done}s")
-	_left=$(printf "%${_left}s")
-	printf "\rProgress : [${_done// />}${_left// /-}] ${_progress}%%"
-
-}	
+#
+#ProgressBar() { # From github.com/fearside/ProgressBar
+#	# Process data
+#		let _progress=(${1}*100/${2}*100)/100
+#		let _done=(${_progress}*4)/10
+#		let _left=40-$_done
+#	# Build progressbar string lengths
+#	_done=$(printf "%${_done}s")
+#	_left=$(printf "%${_left}s")
+#	printf "\rProgress : [${_done// />}${_left// /-}] ${_progress}%%"
+#
+#}	
 # These are the files and variables that will be needed
 usage() { printf 'SPAdes Modern Assembly Script V0.5
 	Absolute minimal script to get SPAdes running
