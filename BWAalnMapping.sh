@@ -365,6 +365,10 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	#elif [ -z ${merged+x} ] && [ -v $r1 ] && [ -v $r2 ]; then
 		#printf "$sample will only run the paired file\n--------\n"
 		alnMapping 2> ${out}BWALogs/$sample.log
+	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" == "NA" ]; then
+	#elif [ -z ${merged+x} ] && [ -v $r1 ] && [ -v $r2 ]; then
+		#printf "$sample will only run the paired file\n--------\n"
+		alnMapping 2> ${out}BWALogs/$sample.log
 	else
 		printf "$sample has an odd combination.  It has been skipped\n" 
 	fi

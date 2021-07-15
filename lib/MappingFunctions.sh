@@ -40,7 +40,7 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 		fi
 	fi
 
-	if [ "$r1" != "NA" ] && ["$r2" != "NA" ]; then # If I found a Paired set
+	if [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then # If I found a Paired set
 	#if [ -v r1 ]; then # If we have paired reads
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $r1 -t $ncores  > tmp1.sai # First index
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $r2 -t $ncores  > tmp2.sai # Second Index
