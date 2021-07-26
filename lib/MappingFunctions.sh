@@ -139,3 +139,32 @@ memMapping(){ # BWA mem Mapping.  Automatically determines if merged or paired.
 	rm tmp.bam
 
 }
+vgMapping(){
+	# Merged Reads
+	if [ "$merged" != "NA" ]; then # If I found a merged file
+		vg map -t $ncores -d $ref -f $merged -k 15 -w 1024 --surject-to bam | samtools view -b -h -F 4 -q $qual -U tmp.bam |\
+			samtools sort - > tmpM.bam
+		samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
+	fi
+
+	# Paired Reads
+	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then
+	#if [ -v r1 ]; then # If we have paired reads
+		vg map -t $ncores -d $ref -f $r1 -f $r2 -k 15 -w 1024 --surject-to bam | samtools view -b -h -F 4 -q $qual -U tmp.bam |\
+			samtools sort - > tmpP.bam
+	
+		samtools fastq -c 6 tmp.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null
+	
+	fi
+
+	# Single End Sequencing
+	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then
+		vg map -t $ncores -d $ref -f $r1 -k 15 -w 1024 --surject-to bam | samtools view -b -h -F 4 -q $qual -U tmp.bam |\
+			samtools sort - > tmpM.bam
+		samtools fastq tmp.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
+	
+	fi
+
+
+
+}
