@@ -11,7 +11,7 @@ export -f GzipDetection
 export -f FileIdentificationInFunction
 export -f FileExtractionInFunction
 # These are the files and variables that will be needed
-usage() { printf 'SPAdes Ancient Assembly Script V0.1
+usage() { printf 'SPAdes Ancient Assembly Script V0.2
 	Implements suggestions from Ana to improve de novo success rate.
 	Assumes basic QC has been done (ie. leeHom & Pooling)
 	No deduplication of the reads!!
@@ -21,7 +21,10 @@ usage() { printf 'SPAdes Ancient Assembly Script V0.1
 	-k\tMin Length (Default: 50)
 	-c\tHow many bp to trim off ends? (Default: 0)
 	-l\tLog File Name (Default: $date)
-        -h\tShow this help message and exit\n' 1>&2; exit 1; }
+        -h\tShow this help message and exit
+	-------------------	
+	TODO:
+		• Figure out how to automate the addition of orphan reads to the assembly\n' 1>&2; exit 1; }
 
 # Creating a simple command to save the settings used.
 log() {	printf "Denovo Assembly settings for $(date):
@@ -81,14 +84,14 @@ if [ -z ${folder} ]; then # Testing if I have an input folder.  That's all I nee
 	exit 1
 fi
 
+# Exporting the required files
+export folder
+export out
+
 # Need to make the ouput folder
 mkdir -p ${out}
 # Writing the Log File
 log | tee $log
-
-# Exporting the required files
-export folder
-export out
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
@@ -121,7 +124,7 @@ rm -rf IntGzip # Not needed anymore
 ###############################################
 ###Let's filter by length and trim the reads###
 ###############################################
-echo "Removing adaptemers and creating the assembly"
+printf "\nRemoving adaptemers and creating the assembly\n"
 mkdir -p ${out}SPAdesLogs
 total=${#samples[@]}
 count=0
@@ -133,17 +136,18 @@ for sample in ${samples[@]}; do
 	SPAdesAncientFunction $sample ${out}AdaptersFiltered > ${out}/SPAdesLogs/${sample}.log
 
 	if [ $? == 0 ]; then
-		echo "Running Quast"
+		printf "\nRunning Quast\n"
 		if [ $HOSTNAME == "info2020" ]; then
 			python2 /usr/local-centos6/quast/version_3.1/quast.py -o ${out}/$sample/quast ${out}/$sample/contigs.fasta 
 		else
 			python2 /usr/local/quast/version_3.1/quast.py -o ${out}/$sample/quast ${out}/$sample/contigs.fasta 
 		fi
 	else
-		echo "$sample encountered an error..."
+		printf "\n$sample encountered an error...\n"
 	fi
 
 	count=$(echo "$count + 1" | bc)
 	ProgressBar $count $total
 done
+rm -rf TMP
 printf "\n"
