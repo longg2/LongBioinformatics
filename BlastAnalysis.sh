@@ -138,7 +138,7 @@ source $script_full_path/lib/BlastFunctions.sh # This loads the QC commands
 usage() { printf "BlastN/P Wrapper Script V0.9
 	Outputs tab deliminated BlastN/P report file in the form of std staxid.  Taxa counts
 	for each step are also outputted.  Need seqkit for subsampling.	String Deduplication occurs.
-	LCA Script requires taxonkit <https://github.com/shenwei356/taxonkit>
+	LCA Analysis requires taxonkit <https://github.com/shenwei356/taxonkit>
 	TBD: Remove Seqkit Completely
         -i\tInput Folder
 	-o\tOutput Folder (Default = BlastOut)

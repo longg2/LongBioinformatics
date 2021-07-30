@@ -116,12 +116,12 @@ ProgressBar() { # From github.com/fearside/ProgressBar
 
 GzipDetection(){ # Need to ID Gzipped files and decompress if needed
 	local file=$1
-	local folderV2=$2
+	local folder=$2
 	local name=${file/%.gz*}
 
-	if file $folderV2/$file | grep -q "compressed"; then
-		gunzip -c $folderV2/$file > IntGzip/$name
+	if file $folder/$file | grep -q "compressed"; then
+		gunzip -c $folder/$file > IntGzip/$name
 	else
-		cp $folderV2/$file IntGzip/$name
+		cp $folder/$file IntGzip/$name
 	fi
 }
