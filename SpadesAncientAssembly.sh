@@ -131,16 +131,15 @@ count=0
 ProgressBar $count $total
 for sample in ${samples[@]}; do
 	AdapterRemovalHeavy $sample ${out}LengthFiltered $out
-
-	echo "Making the Assembly: ML $len & CHOMP $chomp"
+	#echo "Making the Assembly: ML $len & CHOMP $chomp"
 	SPAdesAncientFunction $sample ${out}AdaptersFiltered > ${out}/SPAdesLogs/${sample}.log
 
 	if [ $? == 0 ]; then
 		printf "\nRunning Quast\n"
 		if [ $HOSTNAME == "info2020" ]; then
-			python2 /usr/local-centos6/quast/version_3.1/quast.py -o ${out}/$sample/quast ${out}/$sample/contigs.fasta 
+			python2 /usr/local-centos6/quast/version_3.1/quast.py --min-contig 200 -o ${out}/$sample/quast ${out}/$sample/contigs.fasta 
 		else
-			python2 /usr/local/quast/version_3.1/quast.py -o ${out}/$sample/quast ${out}/$sample/contigs.fasta 
+			python2 /usr/local/quast/version_3.1/quast.py --min-contig 200 -o ${out}/$sample/quast ${out}/$sample/contigs.fasta 
 		fi
 	else
 		printf "\n$sample encountered an error...\n"
