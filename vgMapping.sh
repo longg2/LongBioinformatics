@@ -126,4 +126,4 @@ printf "\nMapping Complete\n"
 # Commands:
 # vg pack
 # vg call
-# How do I combine gam files
+# How do I combine gam files -> gfakluge is a possibility

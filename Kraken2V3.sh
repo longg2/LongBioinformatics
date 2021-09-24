@@ -371,15 +371,15 @@ mkdir -p ${out}KrakenLog
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
 # We need to determine if the file is gzipped
-#echo "Decompressing the files"
-#mkdir -p IntGzip
-#if [ $ncores > 30  ];
-#then
-#	#Preventing an accidental swamping of the cluster
-#	parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
-#else
-#	parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
-#fi
+echo "Decompressing the files"
+mkdir -p IntGzip
+if [ $ncores > 30  ];
+then
+	#Preventing an accidental swamping of the cluster
+	parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
+else
+	parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+fi
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup
