@@ -4,7 +4,7 @@
 BEGIN{OFS = "\t"}
 {
 	name=$1
-	sub(/.*\//,"",name)
-	sub(/\.*$/,"",name)
+	gsub(/.*\/|\.(fasta|fastq)/,"",name)
+	#sub(/\.*$/,"",name)
 	print name,$1
 }
