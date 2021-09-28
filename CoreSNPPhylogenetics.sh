@@ -88,29 +88,29 @@ conda activate pangenome
 find ~+/$folder -type f | $script_full_path/lib/snippyManifest.awk > ${out}snippyManifest.txt
 
 # Running Snippy. Because of it functions, we'll be piping the log to nowhere
-#echo "Running snippy-multi"
-#
-#cd ${out}Snippy
-#tmp=$(echo $OLDPWD) # So that I can work without issue...
-#snippy-multi $tmp/${out}snippyManifest.txt --ref $tmp/$reference --cpus $ncores --quiet | bash 2> $tmp/${out}SnippyLog.log
-#
-#if [ $? -eq 1 ]; then
-#	echo "Snippy failed. Please look at the logs to figure out where"
-#	exit 1
-#fi
-#
-#snippy-clean_full_aln core.full.aln > clean.full.aln
-#
-#cd $tmp
-#unset tmp
-#
+echo "Running snippy-multi"
+
+cd ${out}Snippy
+tmp=$(echo $OLDPWD) # So that I can work without issue...
+snippy-multi $tmp/${out}snippyManifest.txt --ref $tmp/$reference --cpus $ncores --quiet | bash 2> $tmp/${out}SnippyLog.log
+
+if [ $? -eq 1 ]; then
+	echo "Snippy failed. Please look at the logs to figure out where"
+	exit 1
+fi
+
+snippy-clean_full_aln core.full.aln > clean.full.aln
+
+cd $tmp
+unset tmp
+
 ########## Time for Gubbins #############
 echo "Running Gubbins and snp-sites"
 conda activate phylogenies # Need to activate
 
 # Running Gubbins is relatively simple, if potentially long...
 run_gubbins.py ${out}Snippy/clean.full.aln --outgroup Reference --threads $ncores \
-	--filter_percentage $filter --prefix ${out}Gubbins/RecombMask 2> ${out}Gubbins.log
+	--filter_percentage $filter --prefix ${out}Gubbins/RecombMask > ${out}Gubbins.log
 
 if [ $? -eq 1 ]; then
 	echo "Gubbins failed. Please look at the logs to figure out where"
@@ -123,7 +123,7 @@ snp-sites -c ${out}Gubbins/RecombMask.filtered_polymorphic_sites.fasta > ${out}G
 echo "Building the phylogeny"
 iqtree2 -s ${out}Gubbins/clean.core.aln -o Reference -m MFP+ASC \
 	-T AUTO --threads-max $ncores \
-	-b 1000 --prefix ${out}IQTREE/Phylogeny 2> ${out}IQTREE.log
+	-b 1000 --prefix ${out}IQTREE/Phylogeny
 
 if [ $? -eq 1 ]; then
 	echo "IQTREE failed. Please look at the logs to figure out where"
