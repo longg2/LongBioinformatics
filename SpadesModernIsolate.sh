@@ -5,7 +5,7 @@ script_full_path=$(dirname $0)
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 
 SPAdesFunction(){
-	spades --isolate -1 $r1 -2 $r2 --merged $merged -t $ncores -o ${out}/$sample
+	spades -1 $r1 -2 $r2 --merged $merged -t $ncores -o ${out}/$sample
 }
 # These are the files and variables that will be needed
 usage() { printf 'SPAdes Modern Assembly Script V0.5
@@ -38,7 +38,7 @@ while getopts "i:n:o:l:h" arg; do
                         ;;
                 o)
                         out=${OPTARG}
-			export $out
+			export out
                         #echo "The raw sequencing files are located in $raw"
                         ;;
                 n)

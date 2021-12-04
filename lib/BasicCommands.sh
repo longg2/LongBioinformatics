@@ -113,7 +113,6 @@ ProgressBar() { # From github.com/fearside/ProgressBar
 	printf "\rProgress : [${_done// />}${_left// /-}] ${_progress}%%"
 
 }	
-
 GzipDetection(){ # Need to ID Gzipped files and decompress if needed
 	local file=$1
 	local folder=$2
@@ -124,4 +123,9 @@ GzipDetection(){ # Need to ID Gzipped files and decompress if needed
 	else
 		cp $folder/$file IntGzip/$name
 	fi
+}
+RandomFastaSelection(){
+	local fasta=$1
+	local subsample=$2
+	awk 'BEGIN{RS=">";FS="\n"}NR>1{seq="";for (i=2;i<=NF;i++) seq=seq""$i; print ">"$1"\n"seq}' $fasta | awk '{if ((NR%2) == 0) print prev"\t"$0; prev=$0}' | shuf | head -n $subsample | sed 's/\t/\n/g'
 }

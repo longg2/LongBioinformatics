@@ -123,16 +123,21 @@ memMapping(){ # BWA mem Mapping.  Automatically determines if merged or paired.
 	# Merging the files if needed.  Otherwise, we can ignore and simply mv it
 	#if [ -v merged ] && [ -v r1 ]; then
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
-		samtools merge -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam 
-		rm tmpP.bam tmpM.bam 
+		#samtools merge -r -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam 
+		samtools merge -r -f tmpMerged.bam tmpM.bam tmpP.bam 
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpMerged.bam
+		rm tmpP.bam tmpM.bam tmpMerged.bam
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
-		mv tmpSingle.bam  ${out}MappedReads/$sample.bam 
+	#	mv tmpSingle.bam  ${out}MappedReads/$sample.bam 
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpSingle.bam
 	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
-		mv tmpM.bam ${out}MappedReads/$sample.bam 
+		#mv tmpM.bam ${out}MappedReads/$sample.bam 
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpM.bam
 	else
-		mv tmpP.bam ${out}MappedReads/$sample.bam
+		#mv tmpP.bam ${out}MappedReads/$sample.bam
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpP.bam
 	fi
 
 	# Deleting temporary files

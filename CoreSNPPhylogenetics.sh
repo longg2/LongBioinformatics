@@ -92,7 +92,7 @@ echo "Running snippy-multi"
 
 cd ${out}Snippy
 tmp=$(echo $OLDPWD) # So that I can work without issue...
-snippy-multi $tmp/${out}snippyManifest.txt --ref $tmp/$reference --cpus $ncores --quiet | bash 2> $tmp/${out}SnippyLog.log
+snippy-multi $tmp/${out}snippyManifest.txt --mapqual 30 --basequal 20 --ref $tmp/$reference --cpus $ncores --quiet | bash 2> $tmp/${out}SnippyLog.log
 
 if [ $? -eq 1 ]; then
 	echo "Snippy failed. Please look at the logs to figure out where"

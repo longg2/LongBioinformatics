@@ -9,132 +9,6 @@ script_full_path=$(dirname $0)
 
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/BlastFunctions.sh # This loads the QC commands
-
-#GzipDetection(){ # Need to ID Gzipped files and decompress if needed
-#	local file=$1
-#	local folderV2=$2
-#	local name=${file/%.gz*}
-#
-#	if file $folderV2/$file | grep -q "compressed"; then
-#		gunzip -c $folderV2/$file > IntGzip/$name
-#	else
-#		cp $folderV2/$file IntGzip/$name
-#	fi
-#}
-#FastaorFastq(){ # Figuring out if fasta or fastq and converting to fasta.
-#	# All local as I'm avoiding accidental overwrites
-#	local tmp=$1
-#	local outFolder=$2
-#	local firstChar=$(head -c 1 $tmp)
-#	local name=$(basename $tmp | sed -e "s/\.fastq//" -e "s/\.fq//")
-#	
-#	if [ "$firstChar" == ">" ];then
-#		mv $tmp $outFolder/$(basename $tmp)
-#	elif [ "$firstChar" == "@" ];then # Need to convert the file to fasta
-#		sed -n '1~4s/^@/>/p;2~4p' $tmp > $outFolder/$name.fasta
-#	else
-#		echo "Skipping $tmp as it's not fasta/fastq" >> FastaFastq.log
-#	fi
-#}
-#ProgressBar() { # From github.com/fearside/ProgressBar
-#	# Process data
-#		let _progress=(${1}*100/${2}*100)/100
-#		let _done=(${_progress}*4)/10
-#		let _left=40-$_done
-#	# Build progressbar string lengths
-#	_done=$(printf "%${_done}s")
-#	_left=$(printf "%${_left}s")
-#	printf "\rProgress : [${_done// />}${_left// /-}] ${_progress}%%"
-#
-#}	
-#blastCMD() { # The Meat and Potatoes of the script
-#	local in=$1
-#	local sample=$(basename $in .fasta)
-#	mkdir -p ${out}
-#
-#	echo "Running $blast for $sample"
-#	if [ "$blast" == "blastn" ]; then
-#		blastn -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores -perc_identity $Pident -task blastn > ${out}/$sample.tab 2>> BlastNWarnings.log  &
-#		pid=$! # Getting the PID of the blast run
-#		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
-#
-#		local nblines=$(wc -l $in | cut -f 1 -d " ")
-#		echo "Waiting...."
-#		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
-#			if [ -s ${out}/$sample.tab ]; then
-#				local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
-#				local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
-#				ProgressBar $curline $nblines
-#				sleep 10
-#			else
-#				sleep 60 # Want to give it time to think
-#			fi
-#		done
-#		
-#		printf "\n$in is Complete\n"
-#
-#
-#	elif [ "$blast" == "blastp" ]; then
-#		blastp -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores > ${out}/$sample.tab 2>> BlastPWarnings.log &
-#		pid=$! # Getting the PID of the blast run
-#		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
-#
-#		local nblines=$(wc -l $in | cut -f 1 -d " ")
-#		echo "Waiting...."
-#		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
-#			if [ -s ${out}/$sample.tab ]; then
-#				local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
-#				local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
-#				ProgressBar $curline $nblines
-#				sleep 10
-#			else
-#				sleep 60 # Want to give it time to think
-#			fi
-#		done
-#		
-#		printf "\n$in is Complete\n"
-#	elif [ "$blast" == "blastx" ]; then
-#		blastx -db $db -query_gencode 11 -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores  > ${out}/${sample}.tab 2>> BlastXWarnings.log &
-#
-#		pid=$! # Getting the PID of the blast run
-#		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
-#
-#		local nblines=$(wc -l $in | cut -f 1 -d " ")
-#		echo "Waiting...."
-#		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
-#			if [ -s ${out}/$sample.tab ]; then
-#				local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
-#				local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
-#				ProgressBar $curline $nblines
-#				sleep 10
-#			else
-#				sleep 60 # Want to give it time to think
-#			fi
-#		done
-#		
-#		printf "\n$in is Complete\n"
-#	else
-#		echo "Please choose either blastn or blastp"
-#		return 1
-#	fi
-#
-#	return 0
-#}
-#LCA() {	# This will perform the LCA analysis based on the Blast Results
-#	
-#	# Variables and folders
-#	local in=$1 # The sample name
-#	mkdir -p ${out}LCA
-#
-#	# The actual work
-#	echo "Getting the counts"
-#
-#	mapfile -t counts < <(cut -f 1,13 $in | sort --compress-program gzip | uniq -c | sed -e "s/^ *//g" -e "s/ /\t/g" | sort -k3 )
-#
-#	mapfile -t blast < <(cut -f 3 <(printf "%s\n" "${counts[@]}") | uniq | taxonkit lineage | taxonkit reformat -t -R "NA" | cut -f 1,4)
-#	#local blast=$(cut -f 3 <(echo ${counts[@]}) | uniq | taxonkit lineage | taxonkit reformat -t -R "NA" | cut -f 1,4)
-#	join -1 3 -2 1 <(printf "%s\n" "${counts[@]}") <(printf "%s\n" "${blast[@]}") | cut -f 2- -d " " | sed -e "s/ /\t/g" -e "s/;/\t/g" | sort -k 2 > ${out}LCA/$(basename $in)
-#}
 usage() { printf "BlastN/P Wrapper Script V0.9
 	Outputs tab deliminated BlastN/P report file in the form of std staxid.  Taxa counts
 	for each step are also outputted.  Need seqkit for subsampling.	String Deduplication occurs.
@@ -169,17 +43,28 @@ log() {	printf "Blast settings for $(date):
 	-------------------------------------\n"; exit 0;
 }
 
+# Not a fan of this as it limits it to me only....
+source ~/miniconda3/etc/profile.d/conda.sh # Activating 
+conda activate base
+conda activate pangenome
+
 export -f FastaorFastq # important as I'm running this in parallel
 export -f GzipDetection # important as I'm running this in parallel
 export -f LCA # important as I'm running this in parallel
+export -f RandomFastaSelection # This is to remove my reliance on seqkit
 #export -f ProgressBar
 
 # Preset Variables
-#declare -r folder=$1
-#declare -r files=$(find $folder/* -type f -printf "%f\n") # Making an array of files
-
+#export alias blastn="~/miniconda3/envs/pangenome/bin/blastn" # Will it work?
+#echo $(which blastn) 
+#exit 0
 blast="blastn"
-db="/1/scratch/blastdb/nt"
+if [[ $HOSTNAME == "info113" ]]; then
+	db="/1/scratch/blastdb/nt_v5"
+else
+	db="/1/scratch/blastdb/nt"
+fi
+
 declare -i Pident=90
 declare -i len=30
 declare -i subsample=0
@@ -265,7 +150,8 @@ fi
 if [[ $subsample != 0 ]]; then
 	echo "Subsampling the files to ~$subsample reads"
 	mkdir -p ${out}Subsample
-	parallel -j $ncores --bar "seqkit sample {} -n $subsample > ${out}Subsample/{/} 2> /dev/null" ::: ${out}StringDedup/*
+	parallel -j $ncores --bar "RandomFastaSelection {} $subsample > ${out}Subsample/{/}" ::: ${out}StringDedup/*
+	#parallel -j $ncores --bar "seqkit sample {} -n $subsample > ${out}Subsample/{/} 2> /dev/null" ::: ${out}StringDedup/*
 fi
 
 #####################################

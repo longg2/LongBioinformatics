@@ -6,90 +6,6 @@ script_full_path=$(dirname $0)
 
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/QCFunctions.sh # This loads the QC commands
-#DeduplicateArray(){ # Deduplicating the sample names
-#	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
-#	local sampleNames=$(for name in ${array[@]}; do
-#		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I')";
-#		echo $tmp;
-#       	done) # Getting only the sample names
-#	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
-#
-#}
-#FileIdentification(){ # Extract Files from an array using results from another array
-#	local sample=$1 # Basename of the file
-#	local arrayFiles=$files
-#
-#	# Finding the indices which have the same samplename
-#	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
-#}
-#FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
-#	# Unsetting variables in case they're already defined from a previous run 
-#	# unset merged
-#	# unset r1
-#	# unset r2
-#
-#	# This here is a fix that's needed if -v doesn't
-#	merged="NA"
-#	r1="NA"
-#	r2="NA"
-#
-#	# Creating a hidden text file of file names
-#	#printf '%s\n' "${sampleFiles[@]}" #> .hiddenlist.list
-#
-#	# Identifying the files
-#	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1"; then
-#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
-#	        r1="$folder/$fileName"
-#	fi
-#
-#	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2"; then
-#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2')
-#	        r2="$folder/$fileName"
-#	fi
-#
-#	# Two cases for the merged.  Want to control for shenanigans
-#	if printf '%s\n' "${sampleFiles[@]}" | grep -q -i "$sample\.f.*"; then
-#	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -v -q "_\.f*") ]; then
-#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -i "$sample\.f.*")
-#	        merged="$folder/$fileName"
-#	fi
-#
-#	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged"; then
-#	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged") ]; then
-#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
-#	        merged="$folder/$fileName"
-#	fi
-#
-#}
-#AncientTrimming(){ # This uses a combination leeHom and AdapterRemoval
-#
-#	if [ "$r2" == "NA" ]; then #Must be single ended
-#		leeHomMulti --ancientdna --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fqo ${out}Trimmed/${sample} 2> /dev/null # Don't like this as it is hardcoded....  Will it improve my issue though?
-#		#leeHomMulti --ancientdna -f /opt/local/trimmomatic/adapters/TruSeq3-SE.fa --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fqo ${out}Trimmed/${sample} 2> /dev/null
-#
-#	else # It's paired
-#
-#		# First step is to identify the Adapters
-#		/opt/local/AdapterRemoval/AdapterRemoval --identify-adapters --file1 $r1 --file2 $r2 > tmp.out 2> /dev/null
-#		ada1=$(grep "adapter1" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
-#		ada2=$(grep "adapter2" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
-#	
-#		# Next we want to perform the trimming
-#		leeHomMulti --ancientdna -f $ada1 -s $ada2 --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fq2 $r2 -fqo ${out}Trimmed/${sample} 2> /dev/null
-#	fi
-#
-#}
-#ProgressBar() { # From github.com/fearside/ProgressBar
-#	# Process data
-#		let _progress=(${1}*100/${2}*100)/100
-#		let _done=(${_progress}*4)/10
-#		let _left=40-$_done
-#	# Build progressbar string lengths
-#	_done=$(printf "%${_done}s")
-#	_left=$(printf "%${_left}s")
-#	printf "\rProgress : [${_done// />}${_left// /-}] ${_progress}%%"
-#
-#}	
 usage() { printf 'Ancient QC Script V1
 	Very simple.  Want this to focus primarily the workup
 	prior to analysis.
@@ -109,7 +25,7 @@ log() {	printf "Ancient Mapping settings for $(date):
 
 ##################################
 #Default Values
-out="AncientQC"
+out="AncientQC/"
 declare -i ncores=8
 log="$(date +'%Y%m%d').log"
 
@@ -129,7 +45,7 @@ while getopts "i:o:n:l:h" arg; do
                         #echo "Settings are being outputted to $log"
                         ;;
                 o)
-                        out=${OPTARG}
+                        out="${OPTARG}"
                         #echo "Settings are being outputted to $log"
                         ;;
                 h | *)

@@ -5,129 +5,6 @@ script_full_path=$(dirname $0)
 
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/QCFunctions.sh # This loads the QC commands
-#FileIdentification(){ # Extract Files from an array using results from another array
-#	local sample=$1 # Basename of the file
-#	local arrayFiles=$files
-#
-#	# Finding the indices which have the same samplename
-#	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
-#}
-#
-#FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
-#	# Unsetting variables in case they're already defined from a previous run 
-#	# unset merged
-#	# unset r1
-#	# unset r2
-#
-#	# This here is a fix that's needed if -v doesn't
-#	merged="NA"
-#	r1="NA"
-#	r2="NA"
-#
-#	# Creating a hidden text file of file names
-#	printf '%s\n' "${sampleFiles[@]}" > .hiddenlist.list
-#
-#	# Identifying the files
-#	if grep -P -i -q "_r1" .hiddenlist.list; then
-#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i '_r1')
-#	        r1="$folder/$fileName"
-#	fi
-#
-#	if grep -P -i -q "_r2" .hiddenlist.list; then
-#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i '_r2')
-#	        r2="$folder/$fileName"
-#	fi
-#
-#	# Two cases for the merged.  Want to control for shenanigans
-#	if grep -q -i "$sample\.f.*" .hiddenlist.list; then
-#	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -v -q "_\.f*") ]; then
-#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -i "$sample\.f.*")
-#	        merged="$folder/$fileName"
-#	fi
-#
-#	if grep -P -i -q "merged" .hiddenlist.list; then
-#	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged") ]; then
-#		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
-#	        merged="$folder/$fileName"
-#	fi
-#
-#	rm .hiddenlist.list
-#}
-#
-#Trimming(){ # Performing the trimming
-#	# Trimming
-#	local r1=$1
-#	local r2=$2
-#	local sample=$3
-#	local out=$4
-#
-#	if [ "$r2" == "NA" ]; then # If not a paired sample...
-#		echo "$sample is a SE sample"
-#        	fastp -i $r1 \
-#		--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
-#        	--adapter_fasta /usr/local-centos6/trimmomatic/adapters/TruSeq3-PE-2.fa --correction \
-#        	--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15\
-#        	--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3\
-#        	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
-#        	--n_base_limit 0\
-#        	--length_required $len\
-#        	--html ${out}FastpLogs/${sample}.html \
-#        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
-#        	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
-#	else
-#		echo "$sample is a PE sample"
-#        	fastp -i $r1 -I $r2 --merge \
-#        	--merged_out ${out}Trimmed/${sample}_merged.fastq.gz \
-#		--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
-#		--out2 ${out}Trimmed/${sample}_r2.fastq.gz \
-#        	--adapter_fasta /usr/local-centos6/trimmomatic/adapters/TruSeq3-PE-2.fa --correction \
-#        	--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15\
-#        	--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3\
-#        	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
-#        	--overlap_diff_limit 100 --n_base_limit 0\
-#        	--overlap_len_require 15 --length_required $len\
-#        	--html ${out}FastpLogs/${sample}.html \
-#        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
-#        	--unpaired1 ${out}Trimmed/${sample}_u1.fastq.gz \
-#        	--unpaired2 ${out}Trimmed/${sample}_u2.fastq.gz\
-#        	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
-#	fi
-#}
-#
-#FastpWrapper(){ # Convenient Wrapper for parallelization
-#	FileIdentificationInFunction $1 $folder
-#	FileExtraction $folder
-#	Trimming
-#}
-#
-#DeduplicateArray(){ # Deduplicating the sample names
-#	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
-#	local sampleNames=$(for name in ${array[@]}; do
-#		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I')";
-#		echo $tmp;
-#       	done) # Getting only the sample names
-#	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
-#
-#}
-#
-#StringDeduplication(){ # Convenient Wrapper for parallelization
-#	
-#	# Now for the actual deduplication
-#	if [ "$merged" != "NA" ]; then # If I found a merged file
-#		zcat $merged | perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq stdin -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}PrinseqLog/${sample}Merged.log 2> /dev/null | gzip > ${out}PooledLanes/${sample}_Merged.fastq.gz
-#	fi
-#
-#	if [ "$r1" != "NA" ]; then # If I found a paired file
-#		perl ~/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fastq <(zcat $r1) -fastq2 <(zcat $r2) -out_bad null -out_good TMP/${sample}_r -min_len $len -derep 14 -log ${out}PrinseqLog/${sample}Paired.log 2> /dev/null
-#
-#	# Because of how prinseq is coded, I'll need to compress separately	
-#		gzip -c ${sample}_r1.fastq > ${out}PooledLanes/${sample}_r1.fastq.gz
-#		gzip -c ${sample}_r2.fastq > ${out}PooledLanes/${sample}_r2.fastq.gz
-#
-#		rm -rf TMP/*
-#	fi
-#}
-#
 # These are the files and variables that will be needed
 usage() { printf 'Modern QC Script V1
 	This is a minimal script.  All it will do is trim, merge,
@@ -213,8 +90,9 @@ njobs=$(echo "scale=0;var1=$ncores/16;var1"|bc) # Will round down!!!
 for sample in ${samples[@]}; do
 	FileIdentification $sample
 	FileExtraction
-	printf "R1:\t$r1\nR2:\t$r2\nSample:\t$sample\nOut:\t$out\n"
-	sem -j $njobs "Trimming $r1 $r2 $sample $out" 2> ${out}FastpLogNorm/$sample.log
+#	printf "R1:\t$r1\nR2:\t$r2\nSample:\t$sample\nOut:\t$out\n"
+	#sem -j $njobs "Trimming $r1 $r2 $sample $out" 2> ${out}FastpLogNorm/$sample.log
+	Trimming $r1 $r2 $sample $out 2> ${out}FastpLogNorm/$sample.log
 done
 
 ###################
@@ -239,6 +117,14 @@ parallel --bar -j $ncores "cat ${out}Trimmed/{}*merged.fastq.gz > ${out}PooledLa
 	cat ${out}Trimmed/{}*r2.fastq.gz > ${out}PooledLanes/{}_r2.fastq.gz;" ::: "${pooledNames[@]}" # "${samples[@]}"
 
 find ${out}PooledLanes -type f -empty -exec rm {} \;
+###############################################
+### Now to get the FLDs of the Merged Reads ###
+###############################################
+
+mkdir -p ${out}FLD
+
+parallel --bar -j $ncores "zcat ${out}PooledLanes/{}.fastq.gz | $script_full_path/lib/FLDFastq.awk | sort -n | uniq -c | sed -e 's/  //g' -e 's/ /\t/g' > ${out}FLD/{}.tab" ::: "${pooledNames[@]}"
+
 ####################################
 ### Running String Deduplication ###
 ####################################
