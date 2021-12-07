@@ -65,10 +65,9 @@ WeightedLCATable <- pblapply(blastTable, cl = ncores, function(tmp){
 			return(tmp)
 		}else{# If we found at least something
 			index <- summedCount %>% filter(Count >= thresh) %>% pull(get(columnNames[colIndex]))
-			tmpDat <- tmp %>% filter(get(columnNames[colIndex]) == index) %>%
-			       	select(-c("Count", columnNames[(colIndex + 1):9])) %>% distinct()
+			tmpDat <- tmp %>% filter(get(columnNames[colIndex]) == index)
 			tmpDat[1,columnNames[(colIndex + 1):9]] <- NA
-			return(tmpDat)
+			return(tmpDat[1,-1])
 		}
 
 	}
