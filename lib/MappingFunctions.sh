@@ -69,21 +69,25 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	#if [ -v merged ] && [ -v r1 ]; then
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
 		#echo "MERGED and PAIRED"
-		samtools merge -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam
+		samtools merge -r -f tmpMerged.bam tmpM.bam tmpP.bam 
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpMerged.bam
 		samtools merge -f ${out}UnmappedBam/$sample.bam tmpMBad.bam tmpPBad.bam
 		rm tmpP* tmpM*
 	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 		#echo "MERGED"
-		mv tmpM.bam ${out}MappedReads/$sample.bam 
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpM.bam
+		#mv tmpM.bam ${out}MappedReads/$sample.bam 
 		mv tmpMBad.bam ${out}UnmappedBam/$sample.bam 
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
-		mv tmpS.bam  ${out}MappedReads/$sample.bam 
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpS.bam
+		#mv tmpS.bam  ${out}MappedReads/$sample.bam 
 		mv tmpSBad.bam ${out}UnmappedBam/$sample.bam 
 	else
 		#echo "PAIRED"
-		mv tmpP.bam ${out}MappedReads/$sample.bam
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpP.bam
+		#mv tmpP.bam ${out}MappedReads/$sample.bam
 		mv tmpPBad.bam ${out}UnmappedBam/$sample.bam 
 	fi
 

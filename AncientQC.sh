@@ -16,7 +16,7 @@ usage() { printf 'Ancient QC Script V1
         -h\tShow this help message and exit\n' 1>&2; exit 1; }
 
 # Creating a simple command to save the settings used.
-log() {	printf "Ancient Mapping settings for $(date):
+log() {	printf "Ancient QC settings for $(date):
 	Log File:\t${log}
 	Input folder:\t${folder}
 	Output folder:\t${out}
@@ -61,6 +61,7 @@ log | tee $log
 mkdir -p ${out}Trimmed
 mkdir -p ${out}Failed
 mkdir -p ${out}PooledLanes
+mkdir -p ${out}Logs
 ###################################################################
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
@@ -72,6 +73,8 @@ ProgressBar $count $total
 for sample in ${samples[@]}; do
 	FileIdentification $sample
 	FileExtraction
+	#printf "\n$sample\tR1:$r1\tR2:$r2\n"
+
 	AncientTrimming
 	
 	count=$(echo "$count + 1" | bc)

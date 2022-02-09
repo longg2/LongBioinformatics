@@ -36,7 +36,7 @@ TaxaExtraction(){ # If requested, we need to get the reads which mapped against 
 
 	if [ "$merged" != "NA" ]; then # If I found a merged file
 		extract_kraken_reads.py -k ${out}Output/${sample}Merged.out -r ${out}Reports/${sample}Merged.tab \
-			-o ${out}TaxaInterest/$sample.fastq -t $taxa2 --include-children --fastq-output \
+			-o ${out}TaxaInterest/${sample}.fastq -t $taxa2 --include-children --fastq-output \
 			-s $merged
 	fi
 

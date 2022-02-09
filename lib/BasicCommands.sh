@@ -2,7 +2,7 @@
 DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	local sampleNames=$(for name in ${array[@]}; do
-		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I')";
+		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I' -e 's/\.fna//I')";
 		echo $tmp;
        	done) # Getting only the sample names
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
@@ -13,7 +13,7 @@ FileIdentificationInFunction(){ # Since I can't export Arrays, this here is a wo
 	local location=$2
 
 	# Finding the indices which have the same samplename
-	sampleFiles=( $(find $location -name "${sample}*" -type f -exec basename {} \;) )
+	sampleFiles=( $(find -L $location -name "${sample}*" -type f -exec basename {} \;) )
 	#sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
 }
 FileIdentification(){ # Extract Files from an array using results from another array
@@ -65,9 +65,9 @@ FileExtractionInFunction(){ # Assign files to their variables.  Assumes that $sa
 }
 FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
 	# Unsetting variables in case they're already defined from a previous run 
-	# unset merged
-	# unset r1
-	# unset r2
+#	unset merged
+#	unset r1
+#	unset r2
 
 	# This here is a fix that's needed if -v doesn't
 	merged="NA"
@@ -78,12 +78,12 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 	#printf '%s\n' "${sampleFiles[@]}" #> .hiddenlist.list
 
 	# Identifying the files
-	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1"; then
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1|_1.f*"; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
 	        r1="$folder/$fileName"
 	fi
 
-	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2"; then
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2|_2.f*"; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2')
 	        r2="$folder/$fileName"
 	fi

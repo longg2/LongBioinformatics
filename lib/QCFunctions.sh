@@ -6,7 +6,7 @@
 AncientTrimming(){ # This uses a combination leeHom and AdapterRemoval
 
 	if [ "$r2" == "NA" ]; then #Must be single ended
-		leeHomMulti --ancientdna --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fqo ${out}Trimmed/${sample} 2> /dev/null # Don't like this as it is hardcoded....  Will it improve my issue though?
+		leeHomMulti --ancientdna --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fqo ${out}Trimmed/${sample} 2> ${out}Logs/${sample}.log # Don't like this as it is hardcoded....  Will it improve my issue though?
 		#leeHomMulti --ancientdna -f /opt/local/trimmomatic/adapters/TruSeq3-SE.fa --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fqo ${out}Trimmed/${sample} 2> /dev/null
 
 	else # It's paired
@@ -17,7 +17,7 @@ AncientTrimming(){ # This uses a combination leeHom and AdapterRemoval
 		ada2=$(grep "adapter2" tmp.out | sed -e "s/.* //g" -e "s/ .*$//g")
 	
 		# Next we want to perform the trimming
-		leeHomMulti --ancientdna -f $ada1 -s $ada2 --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fq2 $r2 -fqo ${out}Trimmed/${sample} 2> /dev/null
+		leeHomMulti --ancientdna -f $ada1 -s $ada2 --log ${out}leeHomLogs/${sample}.log -t $ncores -fq1 $r1 -fq2 $r2 -fqo ${out}Trimmed/${sample} 2> ${out}Logs/${sample}.log
 	fi
 
 }
@@ -73,12 +73,20 @@ Trimming(){ # Performing the trimming
 	local r2=$2
 	local sample=$3
 	local out=$4
+	
+	# Need to control for differences between info2020 and the rest
+	if [ "$HOSTNAME" == "info2020" ]; then
+		local localFolder="local-centos6"
+	else
+		local localFolder="local"
+
+	fi
 
 	if [ "$r2" == "NA" ]; then # If not a paired sample...
-		echo "$sample is a SE sample"
+		#echo "$sample is a SE sample"
         	fastp -i $r1 \
 		--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
-        	--adapter_fasta /usr/local-centos6/trimmomatic/adapters/TruSeq3-PE-2.fa --correction \
+        	--adapter_fasta /usr/${localFolder}/trimmomatic/adapters/TruSeq3-PE-2.fa --correction \
         	--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15\
         	--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3\
         	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
@@ -88,12 +96,12 @@ Trimming(){ # Performing the trimming
         	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
         	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
 	else
-		echo "$sample is a PE sample"
+		#echo "$sample is a PE sample"
         	fastp -i $r1 -I $r2 --merge \
         	--merged_out ${out}Trimmed/${sample}_merged.fastq.gz \
 		--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
 		--out2 ${out}Trimmed/${sample}_r2.fastq.gz \
-        	--adapter_fasta /usr/local-centos6/trimmomatic/adapters/TruSeq3-PE-2.fa --correction \
+        	--adapter_fasta /usr/${localFolder}/trimmomatic/adapters/TruSeq3-PE-2.fa --correction \
         	--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15\
         	--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3\
         	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\

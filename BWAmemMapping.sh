@@ -294,8 +294,8 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	FileIdentification $sample # Extracting the file names.  Will be saved as $sampleFiles
 	FileExtraction
 
-#	printf "$sample\n"
-#	printf "\nMERGED:$merged\nR1:$r1\nR2:$r2\n" | tee -a $log # Debugging only
+	#printf "$sample\n"
+	#printf "\nMERGED:$merged\nR1:$r1\nR2:$r2\n" | tee -a $log # Debugging only
 	memMapping 2> ${out}BWALogs/$sample.log
 
 	# This here is to prevent odd scenarios where I only have r1 or Merged + r2
@@ -317,15 +317,24 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 
 	# A simple counter
 	#printf "$sample has been filtered ($count/$total)\n--------\n"
+	#count=$(( ++count ))
 	count=$(echo "$count + 1" | bc)
 	ProgressBar $count $total
 
 done
 
-printf "\nMapping Complete\n"
-
-# Only if requested
+# Now we split based on if we want to deduplicate
 if [ "${dedup}" == "TRUE" ]; then
 	echo "Deduplication Requested"
-       parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
+	parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
+	parallel -j $ncores --bar "samtools depth -aa {} > ${out}Depths/{/.}.tab" ::: ${out}DeduplicatedMappings/*bam # Getting the read depths. Something that I end up doing often anyways
+	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*bam > DepthStatistics.tab # This is the script that will calculate the depths.
+	gzip ${out}Depths/*
+else
+	parallel -j $ncores --bar "samtools depth -aa {} > ${out}Depths/{/.}.tab" ::: ${out}MappedReads/*bam # Getting the read depths. Something that I end up doing often anyways
+	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*bam > DepthStatistics.tab # This is the script that will calculate the depths.
+	gzip ${out}Depths/*
 fi
+
+printf "\nMapping Complete\n"
+

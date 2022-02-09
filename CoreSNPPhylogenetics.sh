@@ -19,16 +19,19 @@ usage() { printf 'Core SNP phylogeny creation.
 	-r\tReference Sequence
 	-n\tNumber of CPU Threads to be used (Default = 8)
 	-l\tLog File Name
+	-m\tMinimum Read Coverage for SNP calling (Default = 10)
 	-f\tFilter Percentage for Gubbins [0,100] (Default = 25)
+	-b\tNumber of Bootstraps for Phylogeny (Default = 100)
         -h\tShow this help message and exit\n' 1>&2; exit 0; }
 log() {	printf "Phylogeny settings for $(date):
 	Log File:\t${log}
 	Input folder:\t${folder}
 	Output folder:\t${out}
-	Reference:\t${db}
+	Reference:\t${reference}
 	CPU Threads:\t${ncores}
 	-------------------------------------
 	Filter Percentage:\t${filter}
+	Bootstraps:\t${bootstrap}
 	-------------------------------------\n"; exit 0;
 }
 
@@ -36,7 +39,9 @@ log="$(date +'%Y%m%d').log"
 declare -i ncores=8
 filter=25
 export out="Phylogenetics"
-while getopts "i:r:f:n:o:l:h" arg; do
+bootstrap=100
+mincov=10
+while getopts "i:r:f:n:o:m:l:b:h" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}
@@ -50,11 +55,17 @@ while getopts "i:r:f:n:o:l:h" arg; do
 		o)
 			export out=${OPTARG}
 			;;
+		b)
+			bootstrap=${OPTARG}
+			;;
 		l)
                         log=${OPTARG}
 			;;
 		f)
 			filter=${OPTARG}
+			;;
+		m)
+			mincov=${OPTARG}
 			;;
                 h | *)
                         usage
@@ -92,7 +103,7 @@ echo "Running snippy-multi"
 
 cd ${out}Snippy
 tmp=$(echo $OLDPWD) # So that I can work without issue...
-snippy-multi $tmp/${out}snippyManifest.txt --mapqual 30 --basequal 20 --ref $tmp/$reference --cpus $ncores --quiet | bash 2> $tmp/${out}SnippyLog.log
+snippy-multi $tmp/${out}snippyManifest.txt --mincov $mincov --mapqual 30 --basequal 20 --ref $tmp/$reference --cpus $ncores --quiet | bash 2> $tmp/${out}SnippyLog.log
 
 if [ $? -eq 1 ]; then
 	echo "Snippy failed. Please look at the logs to figure out where"
@@ -123,7 +134,7 @@ snp-sites -c ${out}Gubbins/RecombMask.filtered_polymorphic_sites.fasta > ${out}G
 echo "Building the phylogeny"
 iqtree2 -s ${out}Gubbins/clean.core.aln -o Reference -m MFP+ASC \
 	-T AUTO --threads-max $ncores \
-	-b 1000 --prefix ${out}IQTREE/Phylogeny
+	-b $bootstrap --prefix ${out}IQTREE/Phylogeny --keep-ident
 
 if [ $? -eq 1 ]; then
 	echo "IQTREE failed. Please look at the logs to figure out where"

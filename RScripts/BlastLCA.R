@@ -23,11 +23,11 @@ blastTable <- as_tibble(read.delim(blastTable, header = F, stringsAsFactors = F,
 columnNames <- c("Count", "Sequence", "superkingdom", "phylum","class","order","family","genus","species") 
 colnames(blastTable) <- columnNames 
 #blastTable <- blastTable[!is.na(blastTable$genus),] # Less stringent than other options.  Also speeding things up!
-invisible(gc())
 #taxa <- read.table(taxa,head = F, stringsAsFactors = F)[,1]
 
 cat("Splitting the dataframe into a list.  This should be quick.\n")
 blastTable <- split(blastTable, f = blastTable$Sequence)
+invisible(gc())
 
 # This is where it splits into multiple cores
 op <- pboptions(type = "timer")
@@ -73,46 +73,6 @@ WeightedLCATable <- pblapply(blastTable, cl = ncores, function(tmp){
 	}
 })
 
-# This here is the old way.... Much more complicated than it had to be....
-#WeightedLCATable <- pblapply(blastTable, cl = ncores, function(tmp){
-##WeightedLCATable <- do.call(bind_rows,pblapply(blastTable, cl = ncores, function(tmp){
-#	if(nrow(tmp) == 1){ # If only one
-#		return(tmp %>% select(-c("Count")))
-#	}else if(nrow(tmp) == 0){ # If NOTHING
-#		return(NA)
-#	}else{
-#		# Making a weighted LCA table
-#		thresh <- ceiling(sum(tmp$Count) * composition)
-#		speciesTest <- as.data.frame(tmp %>% group_by(species) %>% summarize(Count = sum(Count), .groups = "drop_last"))
-#		if(any(speciesTest$Count >= thresh)){ # If species A OK
-#			index <- speciesTest %>% filter(Count >= thresh) %>% pull(species)
-#			tmpDat <- tmp %>% filter(species == index) %>% select(-c("Count")) %>% distinct()
-#			return(tmpDat)
-#		}else{ # We dig deeper
-#			genusTest <- as.data.frame(tmp %>% group_by(genus) %>% summarize(Count = sum(Count), .groups = "drop_last"))
-#			if(any(genusTest$Count >= thresh)){ # If genus A OK
-#				index <- genusTest %>% filter(Count >= thresh) %>% pull(genus)
-#				tmpDat <- tmp %>% filter(genus == index) %>% select(-c("Count", "species")) %>% distinct()
-#				tmpDat$species <- NA
-#				return(tmpDat)
-#			}else{ # Family?
-#				familyTest <- as.data.frame(tmp %>% group_by(family) %>% summarize(Count = sum(Count), .groups = "drop_last"))
-#				if(sum(familyTest$Count >= thresh)){
-#					index <- familyTest %>% filter(Count >= thresh) %>% pull(`family`)
-#					tmpDat <- tmp %>% filter(`family` == index) %>% select(-c("Count", "species","genus")) %>% distinct()
-#					tmpDat$species <- NA
-#					tmpDat$genus <- NA
-#					return(tmpDat)
-#				}else{
-#					tmp[1,3:9] <- NA
-#					tmp <- as_tibble(tmp[1,-1])
-#					return(tmp)
-#				}
-#			}
-#		}
-#	}
-#})
-##}))
 cat("The Table is complete, now writing the results!\n")
 WeightedLCATable <- WeightedLCATable[!(is.na(WeightedLCATable))]
 final.df <- do.call(bind_rows,WeightedLCATable)

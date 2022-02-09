@@ -87,12 +87,18 @@ echo "Trimming and Merging Reads"
 
 njobs=$(echo "scale=0;var1=$ncores/16;var1"|bc) # Will round down!!!
 
+total=${#samples[@]}
+count=0
+ProgressBar $count $total
 for sample in ${samples[@]}; do
 	FileIdentification $sample
 	FileExtraction
 #	printf "R1:\t$r1\nR2:\t$r2\nSample:\t$sample\nOut:\t$out\n"
 	#sem -j $njobs "Trimming $r1 $r2 $sample $out" 2> ${out}FastpLogNorm/$sample.log
 	Trimming $r1 $r2 $sample $out 2> ${out}FastpLogNorm/$sample.log
+
+	count=$(echo "$count + 1" | bc)
+	ProgressBar $count $total
 done
 
 ###################
