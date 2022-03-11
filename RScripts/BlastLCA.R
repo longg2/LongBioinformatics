@@ -13,7 +13,7 @@ suppressPackageStartupMessages(library(pbapply))
 # Need to get those variables inserted
 arguments <- commandArgs(trailingOnly = T)
 blastTable <- arguments[1]
-ncores <- arguments[2]
+ncores <- as.numeric(arguments[2])
 outName <- arguments[3]
 composition <- as.numeric(arguments[4])
 
