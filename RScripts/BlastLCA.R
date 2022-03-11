@@ -1,4 +1,4 @@
-#! /usr/bin/Rscript
+#! ~/miniconda3/envs/R/bin/Rscript
 
 suppressPackageStartupMessages(library(methods))
 # Loading the Libraries and installing if need be
@@ -13,7 +13,7 @@ suppressPackageStartupMessages(library(pbapply))
 # Need to get those variables inserted
 arguments <- commandArgs(trailingOnly = T)
 blastTable <- arguments[1]
-ncores <- arguments[2]
+ncores <- as.numeric(arguments[2])
 outName <- arguments[3]
 composition <- as.numeric(arguments[4])
 
