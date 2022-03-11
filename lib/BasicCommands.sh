@@ -2,7 +2,7 @@
 DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	local sampleNames=$(for name in ${array[@]}; do
-		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I' -e 's/\.fna//I')";
+		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I' -e 's/\.fna//I' -e 's/\.fq.*//I')";
 		echo $tmp;
        	done) # Getting only the sample names
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
@@ -89,13 +89,11 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 	fi
 
 	# Two cases for the merged.  Want to control for shenanigans
-	if printf '%s\n' "${sampleFiles[@]}" | grep -q -i "$sample\.f.*"; then
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -q -i "$sample\.f.*"; then
 	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -v -q "_\.f*") ]; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -i "$sample\.f.*")
 	        merged="$folder/$fileName"
-	fi
-
-	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged"; then
+	elif printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged"; then
 	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged") ]; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
 	        merged="$folder/$fileName"

@@ -1,4 +1,4 @@
-#! /usr/bin/Rscript
+#! ~/miniconda3/envs/R/bin/Rscript
 
 suppressPackageStartupMessages(library(methods))
 # Loading the Libraries and installing if need be
