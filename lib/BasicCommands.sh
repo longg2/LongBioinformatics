@@ -78,14 +78,16 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 	#printf '%s\n' "${sampleFiles[@]}" #> .hiddenlist.list
 
 	# Identifying the files
-	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1|_1.f*"; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1\.f*|_1\.f*"; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1\.f*|_1\.f*')
 	        r1="$folder/$fileName"
+		unset $filename
 	fi
 
-	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2|_2.f*"; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2')
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2\.f*|_2\.f*"; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2\.f*|_2\.f*')
 	        r2="$folder/$fileName"
+		unset $filename
 	fi
 
 	# Two cases for the merged.  Want to control for shenanigans
@@ -93,10 +95,12 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -v -q "_\.f*") ]; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -i "$sample\.f.*")
 	        merged="$folder/$fileName"
+		unset $filename
 	elif printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged"; then
 	#if [ $(printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "merged") ]; then
 		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'merged')
 	        merged="$folder/$fileName"
+		unset $filename
 	fi
 
 }
