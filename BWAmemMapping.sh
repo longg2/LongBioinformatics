@@ -4,6 +4,7 @@
 ######################################
 script_name=$0
 script_full_path=$(dirname $0)
+export script_full_path
 
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/MappingFunctions.sh # Contains mem and aln mapping code
@@ -53,7 +54,7 @@ while getopts "i:o:q:r:l:k:n:hd" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}
-			declare -r files=$(find $folder/* -type f -printf "%f\n") # Making an array of files
+			declare -r files=$(find -L $folder/* -type f -printf "%f\n") # Making an array of files
                         #echo "The raw sequencing files are located in $in"
                         ;;
                 o)
@@ -135,12 +136,12 @@ mkdir ${out}Depths/
 if [ "${dedup}" == "TRUE" ]; then
 	echo "Deduplication Requested"
 	parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
-	parallel -j $ncores --bar "samtools depth -aa {} > ${out}Depths/{/.}.tab" ::: ${out}DeduplicatedMappings/*bam # Getting the read depths. Something that I end up doing often anyways
-	#parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*bam > DepthStatistics.tab # This is the script that will calculate the depths.
+	parallel -j $ncores --bar "samtools depth -a {} > ${out}Depths/{/.}.tab" ::: ${out}DeduplicatedMappings/*bam # Getting the read depths. Something that I end up doing often anyways
+	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*bam > DepthStatistics.tab # This is the script that will calculate the depths.
 	gzip ${out}Depths/*
 else
-	parallel -j $ncores --bar "samtools depth -aa {} > ${out}Depths/{/.}.tab" ::: ${out}MappedReads/*bam # Getting the read depths. Something that I end up doing often anyways
-#	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*bam > DepthStatistics.tab # This is the script that will calculate the depths.
+	parallel -j $ncores --bar "samtools depth -a {} > ${out}Depths/{/.}.tab" ::: ${out}MappedReads/*bam # Getting the read depths. Something that I end up doing often anyways
+	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*bam > DepthStatistics.tab # This is the script that will calculate the depths.
 	gzip ${out}Depths/*
 fi
 

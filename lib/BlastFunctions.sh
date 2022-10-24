@@ -58,7 +58,7 @@ blastCMD() { # The Meat and Potatoes of the script
 				ProgressBar $curline $nblines
 				sleep 10
 			else
-				sleep 60 # Want to give it time to think
+				sleep 10 # Want to give it time to think
 			fi
 		done
 		
@@ -78,7 +78,7 @@ blastCMD() { # The Meat and Potatoes of the script
 				ProgressBar $curline $nblines
 				sleep 10
 			else
-				sleep 60 # Want to give it time to think
+				sleep 10 # Want to give it time to think
 			fi
 		done
 		

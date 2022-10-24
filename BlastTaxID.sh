@@ -5,7 +5,7 @@ script_name=$0
 script_full_path=$(dirname $0)
 
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
-usage() { printf 'NCBI Protein Query
+usage() { printf 'NCBI Blast TaxID Lookup
         -i\tThe file with the genes to be searched
 	-o\tThe Output Prefix
         -h\tShow this help message and exit\n' 1>&2; exit 1; }

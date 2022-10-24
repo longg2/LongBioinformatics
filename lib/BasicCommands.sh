@@ -78,14 +78,14 @@ FileExtraction(){ # Assign files to their variables.  Assumes that $sampleFiles 
 	#printf '%s\n' "${sampleFiles[@]}" #> .hiddenlist.list
 
 	# Identifying the files
-	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1\.f*|_1\.f*"; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1\.f*|_1\.f*')
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1\.f*|_1\.f*|_r1_0.*"; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1\.f*|_1\.f*|_r1_0.*')
 	        r1="$folder/$fileName"
 		unset $filename
 	fi
 
-	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2\.f*|_2\.f*"; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2\.f*|_2\.f*')
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2\.f*|_2\.f*|_r2_0.*"; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2\.f*|_2\.f*|_r2_0.*')
 	        r2="$folder/$fileName"
 		unset $filename
 	fi

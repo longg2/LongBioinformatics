@@ -1,4 +1,5 @@
-#!/usr/bin/awk -f
+#! /usr/bin/awk -f
+
 #function stdev(mean, len ,values){
 #	for(i = 1; i <= len; i++){
 #		ss+=(values[i] - mean)^2
@@ -12,6 +13,10 @@ function stdev(sum, sumsq, len){
 function mean(sum, len){
 	Mean=sum/len
 	return(Mean)
+	}
+function CI(stdev, len){
+	Error=1.96 * stdev/sqrt(len) # Looking for a 95% CI
+	return(Error)
 	}
 
 function basename(file, a, n) {
@@ -46,9 +51,10 @@ BEGIN{
 			STDEV=stdev(totDepth,sumsq,len)
 			CV=STDEV/Mean
 			pcov=PCov/len
-			print basename(FILENAME),chrom, Mean, STDEV, CV , pcov
+			Error=CI(STDEV,len)
+			print basename(FILENAME),chrom, Mean, STDEV, Error, CV, pcov
 		}else{
-			print basename(FILENAME), chrom, 0,0,"NA",0
+			print basename(FILENAME), chrom, 0,0,0,"NA",0
 		}
 		
 		chrom=$1
@@ -71,9 +77,10 @@ END{
 		STDEV=stdev(totDepth,sumsq,len)
 		CV=STDEV/Mean
 		pcov=PCov/len
-		print basename(FILENAME),chrom, Mean, STDEV, CV , pcov
+		Error=CI(STDEV,len)
+		print basename(FILENAME),chrom, Mean, STDEV, Error, CV, pcov
 	}else{
-		print basename(FILENAME), chrom, 0,0,"NA",0
+		print basename(FILENAME), chrom, 0,0,0,"NA",0
 	}
 
 }

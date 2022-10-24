@@ -4,28 +4,24 @@
 ######################################
 script_name=$0
 script_full_path=$(dirname $0)
-export script_full_path
 
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/MappingFunctions.sh # The mapping functions
-usage() { printf 'BWA aln Mapping V1.1
-	Mapping using aln is more complicated than it warrants,
-	so here is a useful wrapper that will hopefully make life
-	easier.
-	V1.1 -> Multimappers Separated
+usage() { printf 'Bowtie2 Local Mapping V1
+	Mapping using the Bowtie2 algorithm. Using the Very Sensitive
+	flag
 
 	-i\tThe folder the fasta files (REQUIRED)
-	-o\tOutput folder of the BAM files (Default: BWAMappingScript)
-	-r\tThe BWA index.  Will be mapping reads against it (REQUIRED)
+	-o\tOutput folder of the BAM files (Default: BowtieMappingScript)
+	-r\tThe Bowtie2 index. Will be mapping reads against it (REQUIRED)
 	-k\tMinimum Fragment Length (Default: 30)
 	-q\tMinimum Mapping Quality (Default: 30)
 	-d\tDeduplicate the bam files? (Default: FALSE)
-	-m\tSeparate the MultiMappers? (Default: FALSE)
 	-n\tNumber of CPU Threads to be used (Default: 8)
 	-l\tLog File Name (Default: $date)
         -h\tShow this help message and exit\n' 1>&2; exit 1; }
 
-log() {	printf "BWA aln settings for $(date):
+log() {	printf "Bowtie2 Local settings for $(date):
 	Log File:\t${log}
 	Input folder:\t${folder}
 	Output folder:\t${out}
@@ -35,8 +31,8 @@ log() {	printf "BWA aln settings for $(date):
 	Min Quality:\t${qual}
 	Min Length:\t${len}
 	Deduplicated:\t${dedup}
-	Multimappers Separated:\t${multi}
 	-------------------------------------\n"; exit 0;
+	#Multimappers Separated:\t${multi}
 }
 ######################
 ### Default values ###
@@ -44,7 +40,7 @@ log() {	printf "BWA aln settings for $(date):
 
 declare -i qual=30
 declare -i len=30
-out="BWAMappingScript"
+out="BowtieappingScript"
 declare -i ncores=8
 log="$(date +'%Y%m%d').log"
 dedup="FALSE"
@@ -54,7 +50,7 @@ multi="FALSE"
 ### The UI ###
 ##############
 
-while getopts "i:o:q:r:l:k:n:hdm" arg; do
+while getopts "i:o:q:r:l:k:n:hd" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}
@@ -85,9 +81,6 @@ while getopts "i:o:q:r:l:k:n:hdm" arg; do
                         declare -i ncores=${OPTARG}
                         #echo "Using $ncores CPU Threads"
                         ;;
-		m)
-			multi="TRUE"
-			;;
 		d)
 			dedup="TRUE"
 			;;
@@ -115,9 +108,8 @@ log | tee $log # The inital log file
 mkdir -p ${out}MappedReads
 mkdir -p ${out}UnmappedReads 
 mkdir -p ${out}UnmappedBam 
-mkdir -p ${out}BWALogs
+mkdir -p ${out}Bowtie2Logs
 mkdir -p ${out}Depths
-[ "${multi}" == "TRUE" ] && mkdir -p ${out}MQ0Bam 
 #[ "${multi}" == "TRUE" ] && mkdir -p ${out}Qual0Reads 
 [ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 
@@ -141,19 +133,19 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
 	#if [ -v $merged ] && [ -v $r1 ] && [ -v $r2 ]; then
 		#printf "$sample will run the whole shebang\n--------\n"
-		alnMapping 2> ${out}BWALogs/$sample.log
+		bowtie2Mapping 2> ${out}Bowtie2Logs/$sample.log
 	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v $merged ] && [ -z ${r1+x} ] && [ -z ${r2+x} ]; then
 		#printf "$sample will run only the merged file\n--------\n"
-		alnMapping 2> ${out}BWALogs/$sample.log
+		bowtie2Mapping 2> ${out}Bowtie2Logs/$sample.log
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
 	#elif [ -z ${merged+x} ] && [ -v $r1 ] && [ -v $r2 ]; then
 		#printf "$sample will only run the paired file\n--------\n"
-		alnMapping 2> ${out}BWALogs/$sample.log
+		bowtie2Mapping 2> ${out}Bowtie2Logs/$sample.log
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -z ${merged+x} ] && [ -v $r1 ] && [ -v $r2 ]; then
 		#printf "$sample will only run the paired file\n--------\n"
-		alnMapping 2> ${out}BWALogs/$sample.log
+		bowtie2Mapping 2> ${out}Bowtie2Logs/$sample.log
 	else
 		printf "$sample has an odd combination.  It has been skipped\n" 
 	fi
@@ -169,13 +161,13 @@ if [ "${dedup}" == "TRUE" ]; then
 	printf "\nDeduplication Requested\n"
 	parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
 	printf "Getting Read Depths\n"
-	parallel -j $ncores --bar "samtools depth -a {} > ${out}Depths/{/.}.tab" ::: ${out}DeduplicatedMappings/*bam # Getting the read depths. Something that I end up doing often anyways
+	parallel -j $ncores --bar "samtools depth -aa {} > ${out}Depths/{/.}.tab" ::: ${out}DeduplicatedMappings/*bam # Getting the read depths. Something that I end up doing often anyways
 	printf "Getting Mean and SD of Depths\n"
 	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*tab > ${out}/DepthStatistics.tab # This is the script that will calculate the depths.
 	gzip ${out}Depths/*
 else
 	printf "\nGetting Read Depths\n"
-	parallel -j $ncores --bar "samtools depth -a {} > ${out}Depths/{/.}.tab" ::: ${out}MappedReads/*bam # Getting the read depths. Something that I end up doing often anyways
+	parallel -j $ncores --bar "samtools depth -aa {} > ${out}Depths/{/.}.tab" ::: ${out}MappedReads/*bam # Getting the read depths. Something that I end up doing often anyways
 	printf "Getting Mean and SD of Depths\n"
 	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*tab > ${out}/DepthStatistics.tab # This is the script that will calculate the depths.
 	gzip ${out}Depths/*

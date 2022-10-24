@@ -8,7 +8,7 @@ function bits2str(bits, data, mask) # Frow the gnu manual does what I'm looking 
 		    for (; bits != 0; bits = rshift(bits, 1))
 			            data = (and(bits, mask) ? "1" : "0") data
 		    
-		        while ((length(data) % 8) != 0)
+		        while ((length(data) % 12) != 0)
 				        data = "0" data
 			    return data
 }

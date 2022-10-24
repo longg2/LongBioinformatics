@@ -33,7 +33,7 @@ while getopts "i:o:n:l:h" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}
-			declare -r files=$(find $folder/* -type f -printf "%f\n") # Making an array of files
+			declare -r files=$(find -L $folder/* -type f -printf "%f\n") # Making an array of files
                         #echo "The raw sequencing files are located in $raw"
                         ;;
                 n)
