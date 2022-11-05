@@ -20,19 +20,19 @@ FastaorFastq(){ # Figuring out if fasta or fastq and converting to fasta.
 blastCMD() { # The Meat and Potatoes of the script
 	local in=$1
 	local sample=$(basename $in .fasta)
-	mkdir -p ${out}
+	#mkdir -p ${out}
 
 	echo "Running $blast for $sample"
 	if [ "$blast" == "blastn" ]; then
-		blastn -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores -perc_identity $Pident -task blastn > ${out}/$sample.tab 2>> BlastNWarnings.log  &
+		blastn -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores -perc_identity $Pident -task blastn > ${out}BlastResults/$sample.tab 2>> BlastNWarnings.log  &
 		pid=$! # Getting the PID of the blast run
 		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
 
 		local nblines=$(wc -l $in | cut -f 1 -d " ")
 		echo "Waiting...."
 		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
-			if [ -s ${out}/$sample.tab ]; then
-				local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
+			if [ -s ${out}BlastResults/$sample.tab ]; then
+				local curquery=$(tail -1 ${out}BlastResults/$sample.tab | cut -f 1)
 				local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
 				ProgressBar $curline $nblines
 				sleep 10
@@ -45,15 +45,15 @@ blastCMD() { # The Meat and Potatoes of the script
 
 
 	elif [ "$blast" == "blastp" ]; then
-		blastp -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores > ${out}/$sample.tab 2>> BlastPWarnings.log &
+		blastp -db $db -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores > ${out}BlastResults/$sample.tab 2>> BlastPWarnings.log &
 		pid=$! # Getting the PID of the blast run
 		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
 
 		local nblines=$(wc -l $in | cut -f 1 -d " ")
 		echo "Waiting...."
 		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
-			if [ -s ${out}/$sample.tab ]; then
-				local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
+			if [ -s ${out}BlastResults/$sample.tab ]; then
+				local curquery=$(tail -1 ${out}BlastResults/$sample.tab | cut -f 1)
 				local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
 				ProgressBar $curline $nblines
 				sleep 10
@@ -64,7 +64,7 @@ blastCMD() { # The Meat and Potatoes of the script
 		
 		printf "\n$in is Complete\n"
 	elif [ "$blast" == "blastx" ]; then
-		blastx -db $db -query_gencode 11 -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores  > ${out}/${sample}.tab 2>> BlastXWarnings.log &
+		blastx -db $db -query_gencode 11 -query $in -outfmt "6 std staxid" -evalue $eval -num_threads $ncores  > ${out}BlastResults/${sample}.tab 2>> BlastXWarnings.log &
 
 		pid=$! # Getting the PID of the blast run
 		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
@@ -72,8 +72,8 @@ blastCMD() { # The Meat and Potatoes of the script
 		local nblines=$(wc -l $in | cut -f 1 -d " ")
 		echo "Waiting...."
 		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
-			if [ -s ${out}/$sample.tab ]; then
-				local curquery=$(tail -1 ${out}/$sample.tab | cut -f 1)
+			if [ -s ${out}BlastResults/$sample.tab ]; then
+				local curquery=$(tail -1 ${out}BlastResults/$sample.tab | cut -f 1)
 				local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
 				ProgressBar $curline $nblines
 				sleep 10
@@ -105,4 +105,57 @@ LCA() {	# This will perform the LCA analysis based on the Blast Results
 	mapfile -t blast < <(cut -f 3 <(printf "%s\n" "${counts[@]}") | uniq | taxonkit lineage | taxonkit reformat -t -R "NA" | cut -f 1,4)
 	#local blast=$(cut -f 3 <(echo ${counts[@]}) | uniq | taxonkit lineage | taxonkit reformat -t -R "NA" | cut -f 1,4)
 	join -1 3 -2 1 <(printf "%s\n" "${counts[@]}") <(printf "%s\n" "${blast[@]}") | cut -f 2- -d " " | sed -e "s/ /\t/g" -e "s/;/\t/g" | sort -k 2 > ${out}LCA/$(basename $in)
+}
+
+diamondCMD() { # The Meat and Potatoes of the script
+	local in=$1
+	local sample=$(basename $in .fasta)
+	#mkdir -p ${out}
+
+	echo "Running Diamond for $sample"
+	if [ "$blast" == "blastp" ]; then
+		diamond blasp --db $db --query $in --outfmt "6 std staxid" --evalue $eval --threads $ncores --out ${out}BlastResults/$sample.tab 2>> BlastPWarnings.log &
+		pid=$! # Getting the PID of the blast run
+		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
+
+		local nblines=$(wc -l $in | cut -f 1 -d " ")
+		echo "Waiting...."
+		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
+			if [ -s ${out}BlastResults/$sample.tab ]; then
+				local curquery=$(tail -1 ${out}BlastResults/$sample.tab | cut -f 1)
+				local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
+				ProgressBar $curline $nblines
+				sleep 10
+			else
+				sleep 10 # Want to give it time to think
+			fi
+		done
+		
+		printf "\n$in is Complete\n"
+	elif [ "$blast" == "blastx" ]; then
+		diamond blastx --db $db --query-gencode 11 --query $in --outfmt 6 -b 8 -c 1 --evalue $eval --threads $ncores --out ${out}BlastResults/${sample}.tab 2>> BlastXWarnings.log &
+
+		pid=$! # Getting the PID of the blast run
+		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
+
+		local nblines=$(wc -l $in | cut -f 1 -d " ")
+		echo "Waiting...."
+		while kill -0 $pid 2> /dev/null; do # What I want the script to do while I'm waiting
+			if [ -s ${out}BlastResults/$sample.tab ]; then
+				local curquery=$(tail -1 ${out}BlastResults/$sample.tab | cut -f 1)
+				local curline=$(fgrep -n $curquery $in |  cut -f 1 -d ':')
+				ProgressBar $curline $nblines
+				sleep 10
+			else
+				sleep 10 # Want to give it time to think
+			fi
+		done
+		
+		printf "\n$in is Complete\n"
+	else
+		echo "Please choose either blastp or blastx"
+		return 1
+	fi
+
+	return 0
 }

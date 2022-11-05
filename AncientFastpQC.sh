@@ -130,4 +130,4 @@ find ${out}PooledLanes -type f -empty -exec rm {} \;
 
 mkdir -p ${out}FLD
 
-parallel --bar -j $ncores "zcat ${out}PooledLanes/{}.fastq.gz | $script_full_path/lib/FLDFastq.awk | sort -n | uniq -c | sed -e 's/  *//g' -e 's/ /\t/g' > ${out}FLD/{}.tab" ::: "${pooledNames[@]}"
+parallel --bar -j $ncores "zcat ${out}PooledLanes/{}.fastq.gz | $script_full_path/lib/FLDFastq.awk | sort -n | uniq -c | sed -e 's/^ *//g' -e 's/ /\t/g' > ${out}FLD/{}.tab" ::: "${pooledNames[@]}"

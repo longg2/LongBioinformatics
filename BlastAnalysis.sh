@@ -1,6 +1,4 @@
 #! /usr/bin/env bash
-# To be done:
-# 	• Remove reliance of seqkit
 ######################################
 ### Functions that I'll be calling ###
 ######################################
@@ -16,6 +14,7 @@ usage() { printf "BlastN/P Wrapper Script V0.9
 	TBD: Remove Seqkit Completely
         -i\tInput Folder
 	-o\tOutput Folder (Default = BlastOut)
+	-m\tUse Diamond for the analysis (Default = FALSE)
 	-b\tblastn, blastp, or blastx? (Default = blastn)
 	-d\tBlast database (Default = /1/scratch/blastdb/nt)
 	-e\tMaximum Evalue (Default = 1e-5)
@@ -30,6 +29,7 @@ log() {	printf "Blast settings for $(date):
 	Log File:\t${log}
 	Input folder:\t${folder}
 	Output folder:\t${out}
+	Diamond:\t${diamond}
 	Blast Type:\t${blast}
 	Blast Database:\t${db}
 	Computer:\t${HOSTNAME}
@@ -72,9 +72,10 @@ declare -i ncores=8
 eval="1e-5"
 log="$(date +'%Y%m%d').log"
 lca="FALSE"
+diamond="FALSE"
 out="BlastOut"
 
-while getopts "i:k:e:d:n:o:b:p:l:s:ht" arg; do
+while getopts "i:k:e:d:n:o:b:p:l:s:hmt" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}
@@ -110,6 +111,9 @@ while getopts "i:k:e:d:n:o:b:p:l:s:ht" arg; do
 		t)
                         lca="TRUE"
 			;;
+		m)
+			diamond="TRUE"
+			;;
                 h | *)
                         usage
                         exit 0
@@ -127,14 +131,14 @@ echo "Decompressing the files"
 mkdir -p IntGzip
 parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
 
-# Now to detect if the file in IntGzip is fastq, fasta, or other and conver the file
+# Now to detect if the file in IntGzip is fastq, fasta, or other and convert the file
 mkdir -p ${out}FastaOnly
 echo "Converting FastQ to Fasta"
 parallel -j $ncores --bar "FastaorFastq {} ${out}FastaOnly" ::: IntGzip/*
 rm -rf IntGzip
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
-mkdir -p ${out}StringDedup/
+mkdir -p ${out}StringDedup
 
 if [[ "${blast}" == "blastp" ]]; then
 	echo "BlastP requested.  String deduplication won't be performed"
@@ -158,14 +162,23 @@ fi
 ### Now to run the Blast commands ###
 #####################################
 
-rm -rf ${out} # Delete the folder if it already exists
+#rm -rf ${out} # Delete the folder if it already exists
+mkdir -p ${out}BlastResults
 if [[ $subsample != 0 ]]; then
 	for final in ${out}Subsample/*; do
-		blastCMD $final	
+		if [[ $diamond == "TRUE" ]]; then
+			diamondCMD $final	
+		else
+			blastCMD $final	
+		fi
 	done
 else
 	for final in ${out}StringDedup/*; do
-		blastCMD $final	
+		if [[ $diamond == "TRUE" ]]; then
+			diamondCMD $final	
+		else
+			blastCMD $final	
+		fi
 	done
 fi
 
@@ -178,7 +191,7 @@ if [[ $lca == "TRUE" ]]; then
 	mkdir -p ${out}LCA
 	# Because taxonkit defaults to 4 cores, we don't want to accidentally swamp the machines
 	let taxonKitcores=$ncores/8 # 8 Because I'm using two instances of taxonkit per script
-	parallel -j $taxonKitcores --bar "LCA {}" ::: ${out}/*
+	parallel -j $taxonKitcores --bar "LCA {}" ::: ${out}BlastResults/*
 fi
 
 echo "Blast is Finished!"
