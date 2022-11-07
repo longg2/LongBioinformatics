@@ -1,4 +1,4 @@
-# Bioinformatic Scripts used by George S. Long
+# Bioinformatic Scripts used by George Long
 The scripts located here have been used for the following projects:
 1. [Collapse of the mammoth-steppe in central Yukon as revealed by ancient environmental DNA](https://doi.org/10.1038/s41467-021-27439-6) <-- Not cited as repo was created after the paper was published and results were only present in the supplementary materials. Only MapDamageLoop was used
 2. [Ancient Escherichia coli](https://github.com/longg2/AncientEcoli)
