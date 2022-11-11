@@ -194,10 +194,11 @@ Trimming(){ # Performing the trimming
 		#echo "$sample is a SE sample"
         	fastp -i $r1 \
 		--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
-        	--correction \
+        	--low_complexity_filter --correction \
         	--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15\
         	--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3\
         	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
+        	#--n_base_limit 0\ # Also removed from PE sample
         	--length_required $len\
         	--html ${out}FastpLogs/${sample}.html \
         	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
@@ -208,7 +209,7 @@ Trimming(){ # Performing the trimming
         	--merged_out ${out}Trimmed/${sample}_merged.fastq.gz \
 		--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
 		--out2 ${out}Trimmed/${sample}_r2.fastq.gz \
-        	--detect_adapter_for_pe --correction --low_complexity_filter\
+        	--detect_adapter_for_pe --correction --low_complexity_filter \
         	--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15\
         	--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3\
         	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
