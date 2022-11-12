@@ -32,12 +32,12 @@ AncientTrimmingFastpNoAdapter(){
 	local out=$4
 
 	# Need to control for differences between info2020 and the rest
-	if [ "$HOSTNAME" == "info2020" ]; then
-		local localFolder="local-centos6"
-	else
-		local localFolder="local"
-
-	fi
+#	if [ "$HOSTNAME" == "info2020" ]; then
+#		local localFolder="local-centos6"
+#	else
+#		local localFolder="local"
+#
+#	fi
 
 	if [ "$r2" == "NA" ]; then # If not a paired sample...
 		#echo "$sample is a SE sample"
@@ -76,13 +76,13 @@ AncientTrimmingFastp(){
 	local sample=$3
 	local out=$4
 
-	# Need to control for differences between info2020 and the rest
-	if [ "$HOSTNAME" == "info2020" ]; then
-		local localFolder="local-centos6"
-	else
-		local localFolder="local"
-
-	fi
+#	# Need to control for differences between info2020 and the rest
+#	if [ "$HOSTNAME" == "info2020" ]; then
+#		local localFolder="local-centos6"
+#	else
+#		local localFolder="local"
+#
+#	fi
 
 	if [ "$r2" == "NA" ]; then # If not a paired sample...
 		#echo "$sample is a SE sample"
@@ -182,13 +182,13 @@ Trimming(){ # Performing the trimming
 	local sample=$3
 	local out=$4
 	
-	# Need to control for differences between info2020 and the rest
-	if [ "$HOSTNAME" == "info2020" ]; then
-		local localFolder="local-centos6"
-	else
-		local localFolder="local"
-
-	fi
+#	# Need to control for differences between info2020 and the rest
+#	if [ "$HOSTNAME" == "info2020" ]; then
+#		local localFolder="local-centos6"
+#	else
+#		local localFolder="local"
+#
+#	fi
 
 	if [ "$r2" == "NA" ]; then # If not a paired sample...
 		#echo "$sample is a SE sample"

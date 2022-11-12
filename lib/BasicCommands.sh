@@ -2,7 +2,7 @@
 DeduplicateArray(){ # Deduplicating the sample names
 	local array=("$@") # This feels weird, but, it'll allow you pass an array to it
 	local sampleNames=$(for name in ${array[@]}; do
-		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I' -e 's/\.fna//I' -e 's/\.fq.*//I')";
+		tmp="$(echo $name |sed -e 's/_r1.*//I' -e 's/_r2.*//I' -e 's/_merged.*//I' -e 's/\.fa.*//I' -e 's/\.fna//I' -e 's/\.fq.*//I' -e 's/_1\.f.*//I' -e 's/_2\.f.//I')";
 		echo $tmp;
        	done) # Getting only the sample names
 	samples=( $(echo ${sampleNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') )
@@ -39,13 +39,13 @@ FileExtractionInFunction(){ # Assign files to their variables.  Assumes that $sa
 	#printf '%s\n' "${sampleFiles[@]}" #> .hiddenlist.list
 
 	# Identifying the files
-	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1"; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1')
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1\.f*|_1\.f*|_r1_0.*"; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1\.f*|_1\.f*|_r1_0.*')
 	        r1="$folderExtraction/$fileName"
 	fi
 
-	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2"; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2')
+	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2\.f*|_2\.f*|_r2_0.*"; then
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2\.f*|_2\.f*|_r2_0.*')
 	        r2="$folderExtraction/$fileName"
 	fi
 
