@@ -120,6 +120,14 @@ AncientTrimmingAssembly(){ # This uses a combination leeHom and AdapterRemoval
 	local r2=$2
 	local sample=$3
 	local out=$4
+	local jobs=$5
+	local totalThreads=$6
+
+	# Testing the number of jobs I'm working with
+	
+	if [[ $jobs == 1 ]]; then
+		local threads=$totalThreads
+	fi
 
 	if [ "$r2" == "NA" ]; then # If not a paired sample...
 		echo "$sample is a SE sample"
@@ -132,7 +140,7 @@ AncientTrimmingAssembly(){ # This uses a combination leeHom and AdapterRemoval
         	--n_base_limit 0\
         	--length_required $len\
         	--html ${out}FastpLogs/${sample}.html \
-        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread $threads -R $sample \
         	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
 	else
 		echo "$sample is a PE sample"
@@ -146,7 +154,7 @@ AncientTrimmingAssembly(){ # This uses a combination leeHom and AdapterRemoval
         	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
         	--n_base_limit 0 --length_required $len\
         	--html ${out}FastpLogs/${sample}.html \
-        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread $threads -R $sample \
         	--unpaired1 ${out}Trimmed/${sample}_u1.fastq.gz \
         	--unpaired2 ${out}Trimmed/${sample}_u2.fastq.gz\
         	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
@@ -181,6 +189,8 @@ Trimming(){ # Performing the trimming
 	local r2=$2
 	local sample=$3
 	local out=$4
+	local jobs=$5
+	local totalThreads=$6
 	
 #	# Need to control for differences between info2020 and the rest
 #	if [ "$HOSTNAME" == "info2020" ]; then
@@ -189,6 +199,10 @@ Trimming(){ # Performing the trimming
 #		local localFolder="local"
 #
 #	fi
+
+	if [[ $jobs == 1 ]]; then
+		local threads=$totalThreads
+	fi
 
 	if [ "$r2" == "NA" ]; then # If not a paired sample...
 		#echo "$sample is a SE sample"
@@ -201,7 +215,7 @@ Trimming(){ # Performing the trimming
         	#--n_base_limit 0\ # Also removed from PE sample
         	--length_required $len\
         	--html ${out}FastpLogs/${sample}.html \
-        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread $threads -R $sample \
         	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
 	else
 		#echo "$sample is a PE sample"
@@ -215,7 +229,7 @@ Trimming(){ # Performing the trimming
         	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
         	--overlap_len_require 15 --length_required $len\
         	--html ${out}FastpLogs/${sample}.html \
-        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread $threads -R $sample \
         	--unpaired1 ${out}Trimmed/${sample}_u1.fastq.gz \
         	--unpaired2 ${out}Trimmed/${sample}_u2.fastq.gz\
         	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
@@ -227,7 +241,7 @@ FastpWrapper(){ # Convenient Wrapper for parallelization
 
 	FileIdentificationInFunction $sample $folder
 	FileExtractionInFunction $folder
-	Trimming $r1 $r2 $sample $out 2> ${out}FastpLogNorm/$sample.log
+	Trimming $r1 $r2 $sample $out $njobs $ncores 2> ${out}FastpLogNorm/$sample.log
 } 
 
 # String Deduplication Commands.  Parallelization may or may not work

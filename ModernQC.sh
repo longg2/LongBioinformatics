@@ -35,7 +35,7 @@ export -f FileExtractionInFunction
 
 #Default Values
 out="ModernQC"
-ncores=8
+export ncores=8
 export len=30
 log="$(date +'%Y%m%d').log"
 dedupMethod="NONE"
@@ -55,6 +55,7 @@ while getopts "i:k:n:o:l:h" arg; do
                         ;;
                 n)
                         declare -i ncores=${OPTARG}
+			export ncores
                         #echo "Using $ncores"
                         ;;
                 k)
@@ -89,6 +90,13 @@ mkdir -p ${out}FastpLogNorm
 echo "Trimming and Merging Reads"
 
 njobs=$(echo "scale=0;var1=$ncores/16;var1"|bc) # Will round down!!!
+
+# If we're dealing with less than 16 threads!
+if [[ $njobs -eq 0 ]]; then
+	njobs=1
+	export njobs # This is to tell the fastp function how many threads we're working with
+fi
+
 
 parallel -j $njobs --bar "FastpWrapper {}" ::: ${samples[@]}
 
