@@ -60,8 +60,10 @@ while getopts "i:r:f:n:g:o:m:l:b:h" arg; do
 			export reference
                         ;;
                 g)
-                        declare outgroup=${OPTARG}
-			outgroup=$(basename $outgroup .fna)
+                        declare outgroupFiles=${OPTARG}
+			outgroup=$(echo $outgroupFiles | tr "," "\n" | sed -e "s/^.*\///" -e "s/\.f.*//" | tr "\n" "," | sed "s/,$//")
+			#outgroup=$(basename $outgroup .fna)
+			
 			#export outgroup
                         ;;
                 n)

@@ -1,14 +1,15 @@
 #! /usr/bin/env bash
-# These are the functions that actually do the work.  Mean to make parallelization easier to do
+# These are the functions that actually do the work.
 script_name=$0
 script_full_path=$(dirname $0)
 
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/QCFunctions.sh # This loads the QC commands
 # These are the files and variables that will be needed
-usage() { printf 'Modern QC Script V1
-	This is a minimal script.  All it will do is trim, merge,
-	and Pool the reads.  Assumes you have fastp.
+usage() { printf 'Ancient QC Script V2
+	This is minimal script. Assumes that all you want to do
+	is trim, merge, and pool lanes together. Will detect adapters
+	automatically. Requires fastp to run.
         -i\tThe folder that contains the Raw sequencing files
 	-o\tThe output prefix (Default: QC)
 	-n\tNumber of CPU Threads to be used (Default: 16)
@@ -84,9 +85,9 @@ log | tee $log
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 #echo ${samples[@]}
 #exit 0
-####################################
-###Trimming the reads with leeHom###
-####################################
+###################################
+###Trimming the reads with Fastp###
+###################################
 mkdir -p ${out}Trimmed
 mkdir -p ${out}FastpLogs
 mkdir -p ${out}FailedQC
@@ -94,6 +95,11 @@ mkdir -p ${out}FastpLogNorm
 echo "Trimming and Merging Reads"
 
 njobs=$(echo "scale=0;var1=$ncores/16;var1"|bc) # Will round down!!!
+
+if [[ $njobs -eq 0 ]]; then
+	njobs=1
+	export njobs # This is to tell the fastp function how many threads we're working with
+fi
 
 if [ "$adapter" == "TRUE" ]; then
 	export -f FastpWrapperAncient # Only want to export the functions I need

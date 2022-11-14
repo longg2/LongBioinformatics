@@ -30,6 +30,14 @@ AncientTrimmingFastpNoAdapter(){
 	local r2=$2
 	local sample=$3
 	local out=$4
+	local jobs=$5
+	local totalThreads=$6
+
+	# Testing the number of jobs I'm working with
+	
+	if [[ $jobs == 1 ]]; then
+		local threads=$totalThreads
+	fi
 
 	# Need to control for differences between info2020 and the rest
 #	if [ "$HOSTNAME" == "info2020" ]; then
@@ -50,7 +58,7 @@ AncientTrimmingFastpNoAdapter(){
         	#--n_base_limit 0\ # Also removed from PE sample
         	--length_required $len\
         	--html ${out}FastpLogs/${sample}.html \
-        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread $threads -R $sample \
         	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
 	else
 		#echo "$sample is a PE sample"
@@ -64,7 +72,7 @@ AncientTrimmingFastpNoAdapter(){
         	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
         	--overlap_len_require 15 --length_required $len\
         	--html ${out}FastpLogs/${sample}.html \
-        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread $threads -R $sample \
         	--unpaired1 ${out}Trimmed/${sample}_u1.fastq.gz \
         	--unpaired2 ${out}Trimmed/${sample}_u2.fastq.gz\
         	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
@@ -75,6 +83,14 @@ AncientTrimmingFastp(){
 	local r2=$2
 	local sample=$3
 	local out=$4
+	local jobs=$5
+	local totalThreads=$6
+
+	# Testing the number of jobs I'm working with
+	
+	if [[ $jobs == 1 ]]; then
+		local threads=$totalThreads
+	fi
 
 #	# Need to control for differences between info2020 and the rest
 #	if [ "$HOSTNAME" == "info2020" ]; then
@@ -95,7 +111,7 @@ AncientTrimmingFastp(){
         	#--n_base_limit 0\ # Also removed from PE sample
         	--length_required $len\
         	--html ${out}FastpLogs/${sample}.html \
-        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread $threads -R $sample \
         	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
 	else
 		#echo "$sample is a PE sample"
@@ -109,7 +125,7 @@ AncientTrimmingFastp(){
         	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3\
         	--overlap_len_require 15 --length_required $len\
         	--html ${out}FastpLogs/${sample}.html \
-        	--json ${out}FastpLogs/${sample}.json -R $sample --thread 16 -R $sample \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread $threads -R $sample \
         	--unpaired1 ${out}Trimmed/${sample}_u1.fastq.gz \
         	--unpaired2 ${out}Trimmed/${sample}_u2.fastq.gz\
         	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
@@ -165,14 +181,14 @@ FastpWrapperAncientNoAdapter(){ # Convenient Wrapper for parallelization
 
 	FileIdentificationInFunction $sample $folder
 	FileExtractionInFunction $folder
-	AncientTrimmingFastpNoAdapter $r1 $r2 $sample $out 2> ${out}FastpLogNorm/$sample.log
+	AncientTrimmingFastpNoAdapter $r1 $r2 $sample $out $njobs $ncores 2> ${out}FastpLogNorm/$sample.log
 } 
 FastpWrapperAncient(){ # Convenient Wrapper for parallelization
 	local sample=$1
 
 	FileIdentificationInFunction $sample $folder
 	FileExtractionInFunction $folder
-	AncientTrimmingFastp $r1 $r2 $sample $out 2> ${out}FastpLogNorm/$sample.log
+	AncientTrimmingFastp $r1 $r2 $sample $out $njobs $ncores 2> ${out}FastpLogNorm/$sample.log
 } 
 FastpWrapperAncientAssembly(){ # Convenient Wrapper for parallelization
 	FileIdentificationInFunction $1 $folder
