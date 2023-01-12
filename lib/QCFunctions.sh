@@ -37,6 +37,8 @@ AncientTrimmingFastpNoAdapter(){
 	
 	if [[ $jobs == 1 ]]; then
 		local threads=$totalThreads
+	else
+		local threads=16
 	fi
 
 	# Need to control for differences between info2020 and the rest
@@ -90,6 +92,8 @@ AncientTrimmingFastp(){
 	
 	if [[ $jobs == 1 ]]; then
 		local threads=$totalThreads
+	else
+		local threads=16
 	fi
 
 #	# Need to control for differences between info2020 and the rest
@@ -143,6 +147,8 @@ AncientTrimmingAssembly(){ # This uses a combination leeHom and AdapterRemoval
 	
 	if [[ $jobs == 1 ]]; then
 		local threads=$totalThreads
+	else
+		local threads=16
 	fi
 
 	if [ "$r2" == "NA" ]; then # If not a paired sample...

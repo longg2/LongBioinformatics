@@ -194,4 +194,11 @@ if [[ $lca == "TRUE" ]]; then
 	parallel -j $taxonKitcores --bar "LCA {}" ::: ${out}BlastResults/*
 fi
 
+###############################
+### Compressing the Results ###
+###############################
+echo "Compressing the blast files"
+
+parallel -j $ncores --bar "gzip {}" ::: ${out}BlastResults/*tab
+
 echo "Blast is Finished!"
