@@ -114,7 +114,7 @@ diamondCMD() { # The Meat and Potatoes of the script
 
 	echo "Running Diamond for $sample"
 	if [ "$blast" == "blastp" ]; then
-		diamond blasp --db $db --query $in --outfmt "6 std staxid" --evalue $eval --threads $ncores --out ${out}BlastResults/$sample.tab 2>> BlastPWarnings.log &
+		diamond blastp --db $db --query $in --outfmt "6 std staxid" --evalue $eval --threads $ncores --out ${out}BlastResults/$sample.tab 2>> BlastPWarnings.log &
 		pid=$! # Getting the PID of the blast run
 		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
 
@@ -133,7 +133,7 @@ diamondCMD() { # The Meat and Potatoes of the script
 		
 		printf "\n$in is Complete\n"
 	elif [ "$blast" == "blastx" ]; then
-		diamond blastx --db $db --query-gencode 11 --query $in --outfmt 6 -b 8 -c 1 --evalue $eval --threads $ncores --out ${out}BlastResults/${sample}.tab 2>> BlastXWarnings.log &
+		diamond blastx --db $db --query-gencode 11 --query $in --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore staxids -b 8 -c 1 --evalue $eval --threads $ncores --out ${out}BlastResults/${sample}.tab 2>> BlastXWarnings.log &
 
 		pid=$! # Getting the PID of the blast run
 		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
