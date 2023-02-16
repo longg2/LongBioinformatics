@@ -165,19 +165,27 @@ for sample in ${samples[@]}; do # Iterating over an array of Samples
 done
 
 # Now we split based on if we want to deduplicate
+
+# This is taking into account cases where the slash isn't being given
+if [ "$out" != "" ] & [ "${out: -1}" != "" ]; then
+	outFolder="${out}/"
+else
+	outFolder=$out
+fi
+
 if [ "${dedup}" == "TRUE" ]; then
 	printf "\nDeduplication Requested\n"
 	parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
 	printf "Getting Read Depths\n"
-	parallel -j $ncores --bar "samtools depth -a {} > ${out}Depths/{/.}.tab" ::: ${out}DeduplicatedMappings/*tab # Getting the read depths. Something that I end up doing often anyways
+	parallel -j $ncores --bar "samtools depth -a {} > ${out}Depths/{/.}.tab" ::: ${out}DeduplicatedMappings/*bam # Getting the read depths. Something that I end up doing often anyways
 	printf "Getting Mean and SD of Depths\n"
-	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*tab > ${out}/DepthStatistics.tab # This is the script that will calculate the depths.
+	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*tab > ${outFolder}DepthStatistics.tab # This is the script that will calculate the depths.
 	gzip ${out}Depths/*
 else
 	printf "\nGetting Read Depths\n"
 	parallel -j $ncores --bar "samtools depth -a {} > ${out}Depths/{/.}.tab" ::: ${out}MappedReads/*bam # Getting the read depths. Something that I end up doing often anyways
 	printf "Getting Mean and SD of Depths\n"
-	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*tab > ${out}/DepthStatistics.tab # This is the script that will calculate the depths.
+	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*tab > ${outFolder}DepthStatistics.tab # This is the script that will calculate the depths.
 	gzip ${out}Depths/*
 fi
 
