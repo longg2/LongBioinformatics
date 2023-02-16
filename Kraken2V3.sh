@@ -114,13 +114,18 @@ DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable 
 # We need to determine if the file is gzipped
 echo "Decompressing the files"
 mkdir -p IntGzip
-if [ $ncores > 30  ];
+
+# I've run into the limits of parallel here, going to make it a file to read through instead
+echo "${files[@]}" | tr " " "\n" > file.tmp
+if [ $ncores > 30 ];
 then
 	#Preventing an accidental swamping of the cluster
-	parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
+	parallel -j 30 --bar "GzipDetection {} $folder" :::: file.tmp
 else
-	parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+	parallel -j $ncores --bar "GzipDetection {} $folder" :::: file.tmp=
 fi
+
+rm file.tmp
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup
@@ -138,7 +143,13 @@ echo "String Deduplciation with prinseq"
 #	ProgressBar $count $total
 #done
 #printf "\n"
-parallel -j $ncores --bar "StringDeduplicationParallel {} IntGzip $len 2> /dev/null" ::: "${samples[@]}" # DOESN'T WORK!!
+if [ $ncores > 30 ];
+then
+	parallel -j 30 --bar "StringDeduplicationParallel {} IntGzip $len 2> /dev/null" ::: "${samples[@]}" # DOESN'T WORK!!
+else
+	parallel -j $ncores --bar "StringDeduplicationParallel {} IntGzip $len 2> /dev/null" ::: "${samples[@]}" # DOESN'T WORK!!
+fi
+
 rm -rf TMP
 rm -rf IntGzip
 
@@ -158,7 +169,7 @@ done
 
 echo "Combining the Merged and Paired Reports and preparing for a Krona plot"
 parallel --bar -j $ncores "combine_kreports.py -r ${out}Reports/{}*tab --only-combined --no-header -o ${out}CombinedReports/{}.tab > /dev/null 2> /dev/null; kreport2krona.py -r ${out}CombinedReports/{}.tab -o ${out}Krona/{}.txt" ::: "${samples[@]}"
-ktImportText -o KronaPlot.html ${outPrefix}Krona/* # making the KronaPlot
+ktImportText ${out}Krona/* -o KronaPlot.html # making the KronaPlot
 #
 ## If requested, we want to also pull out the taxa of interest
 if [ $taxa != "NULL" ];then
