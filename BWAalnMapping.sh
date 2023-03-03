@@ -167,7 +167,7 @@ done
 # Now we split based on if we want to deduplicate
 
 # This is taking into account cases where the slash isn't being given
-if [ "$out" != "" ] & [ "${out: -1}" != "" ]; then
+if [ "$out" != "" ] & [ "${out: -1}" != "/" ]; then
 	outFolder="${out}/"
 else
 	outFolder=$out
