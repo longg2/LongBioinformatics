@@ -117,9 +117,11 @@ mkdir -p IntGzip
 if [ $ncores > 30  ];
 then
 	#Preventing an accidental swamping of the cluster
-	parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
+	ls -1 $folder | parallel -j 30 --bar "GzipDetection {} $folder"
+	#parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
 else
-	parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+	ls -1 $folder | parallel -j $ncores --bar "GzipDetection {} $folder"
+	#parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
 fi
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs

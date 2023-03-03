@@ -344,6 +344,9 @@ StringDeduplicationParallel(){
 		gzip -c TMP/${sample}_2.fastq > ${out}StringDedup/${sample}_r2.fastq.gz
 
 	fi
+
+	# Now we need to delete the TMP files
+	rm TMP/${sample}*fastq
 }
 
 AssemblyPreparation(){ 
