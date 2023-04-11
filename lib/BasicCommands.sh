@@ -21,7 +21,7 @@ FileIdentification(){ # Extract Files from an array using results from another a
 	local arrayFiles=$files
 
 	# Finding the indices which have the same samplename
-	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "${sample}\.|${sample}_" | tr '\012' ' '))
+	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep -E "${sample}\.|${sample}_" | tr '\012' ' '))
 }
 FileExtractionInFunction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
 	# Unsetting variables in case they're already defined from a previous run 

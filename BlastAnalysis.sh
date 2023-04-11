@@ -34,7 +34,7 @@ log() {	printf "Blast settings for $(date):
 	Blast Database:\t${db}
 	Computer:\t${HOSTNAME}
 	-------------------------------------
-	E-value:\t${eval}
+	E-value:\t${Eval}
 	Percent Identity:\t${Pident}
 	Subsampled Reads:\t${subsample}
 	Min Read Length:\t${len}	
@@ -69,7 +69,7 @@ declare -i Pident=90
 declare -i len=30
 declare -i subsample=0
 declare -i ncores=8
-eval="1e-5"
+Eval="1e-5"
 log="$(date +'%Y%m%d').log"
 lca="FALSE"
 diamond="FALSE"
@@ -82,7 +82,7 @@ while getopts "i:k:e:d:n:o:b:p:l:s:hmt" arg; do
 			declare -r files=$(find -L $folder/* -type f -printf "%f\n") # Making an array of files
                         ;;
 		e)
-			eval=${OPTARG}
+			Eval=${OPTARG}
 			;;
                 d)
                         db=${OPTARG}
@@ -129,12 +129,13 @@ log | tee $log
 # We need to determine if the file is gzipped
 echo "Decompressing the files"
 mkdir -p IntGzip
-parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+ls -1 $folder | parallel -j $ncores --bar "GzipDetection {} $folder"
 
 # Now to detect if the file in IntGzip is fastq, fasta, or other and convert the file
 mkdir -p ${out}FastaOnly
 echo "Converting FastQ to Fasta"
-parallel -j $ncores --bar "FastaorFastq {} ${out}FastaOnly" ::: IntGzip/*
+ls -1 IntGzip | parallel -j $ncores --bar "FastaorFastq {} ${out}FastaOnly"
+# parallel -j $ncores --bar "FastaorFastq {} ${out}FastaOnly" ::: IntGzip/*
 rm -rf IntGzip
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
@@ -147,14 +148,17 @@ else
 
 	mkdir -p ${out}prinseqLog
 	echo "String Deduplciation with prinseq"
-	parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null" ::: ${out}FastaOnly/*
+	ls -1 ${out}FastaOnly | parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null"
+	#parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null" ::: ${out}FastaOnly/*
 fi
+rm -rf ${out}FastaOnly
 
 # The final step is to test if StringDeduplication will occur
 if [[ $subsample != 0 ]]; then
 	echo "Subsampling the files to ~$subsample reads"
 	mkdir -p ${out}Subsample
-	parallel -j $ncores --bar "RandomFastaSelection {} $subsample > ${out}Subsample/{/}" ::: ${out}StringDedup/*
+	ls -1 ${out}StringDedup | parallel -j $ncores --bar "RandomFastaSelection {} $subsample > ${out}Subsample/{/}"
+#	parallel -j $ncores --bar "RandomFastaSelection {} $subsample > ${out}Subsample/{/}" ::: ${out}StringDedup/*
 	#parallel -j $ncores --bar "seqkit sample {} -n $subsample > ${out}Subsample/{/} 2> /dev/null" ::: ${out}StringDedup/*
 fi
 
@@ -191,7 +195,8 @@ if [[ $lca == "TRUE" ]]; then
 	mkdir -p ${out}LCA
 	# Because taxonkit defaults to 4 cores, we don't want to accidentally swamp the machines
 	let taxonKitcores=$ncores/8 # 8 Because I'm using two instances of taxonkit per script
-	parallel -j $taxonKitcores --bar "LCA {}" ::: ${out}BlastResults/*
+	ls -1 ${out}BlastResults | parallel -j $taxonKitcores --bar "LCA {}"
+	#parallel -j $taxonKitcores --bar "LCA {}" ::: ${out}BlastResults/*
 fi
 
 ###############################
@@ -199,6 +204,8 @@ fi
 ###############################
 echo "Compressing the blast files"
 
-parallel -j $ncores --bar "gzip {}" ::: ${out}BlastResults/*tab
+ls -1 ${out}BlastResults | parallel -j $ncores --bar "gzip {}"
+ls -1 ${out}StringDedup | parallel -j $ncores --bar "gzip {}"
+#parallel -j $ncores --bar "gzip {}" ::: ${out}BlastResults/*tab
 
 echo "Blast is Finished!"

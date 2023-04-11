@@ -132,6 +132,7 @@ count=0
 ProgressBar $count $total
 for sample in ${samples[@]}; do # Iterating over an array of Samples
 	FileIdentification $sample # Extracting the file names.  Will be saved as $sampleFiles
+	#printf "\n${sampleFiles[@]}\n"
 	FileExtraction
 
 #	printf "\n$sample"
