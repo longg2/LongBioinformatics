@@ -9,20 +9,20 @@
 function stdev(sum, sumsq, len){
 	sdev=sqrt((sumsq / len) - (sum / len)^2)
 	return(sdev)
-	}
+}
 function mean(sum, len){
 	Mean=sum/len
 	return(Mean)
-	}
+}
 function CI(stdev, len){
 	Error=1.96 * stdev/sqrt(len) # Looking for a 95% CI
 	return(Error)
-	}
+}
 
 function basename(file, a, n) {
-	    n = split(file, a, "/")
-	        return a[n]
-	}
+	n = split(file, a, "/")
+	return a[n]
+}
 
 BEGIN{
 	OFS="\t"
