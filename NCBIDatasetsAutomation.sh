@@ -15,7 +15,7 @@ usage() { printf 'NCBI Download Automation
 
 while getopts "t:h" arg; do
         case $arg in
-                i)
+                t)
 			taxa="${OPTARG}"
                         #echo "The raw sequencing files are located in $raw"
                         ;;
@@ -37,7 +37,7 @@ identifier="T${taxa}D$(date +"%Y%m%d")"
 # This downloads the genomes, gff, and gbk files from NCBI
 datasets download genome taxon $taxa --assembly-source RefSeq \
        	--filename RefseqGenomes${identifier}.zip \
-       	--assembly-level chromosome,complete --exclude_atypical \
+       	--assembly-level chromosome,complete --exclude-atypical \
        	--include genome,gff3,gbff
 
 # Now, we'll start with extracting the dates. At least for me, these are fairly important for my phylogenies.
@@ -56,15 +56,15 @@ mapfile -t nocollection < <(cut -f 1-3 ${identifier}DatesRaw.tab | tail -n +2 | 
 $script_full_path/NCBIDateParsing.awk <(printf "%s\n" "${collection[@]}") <(printf "%s\n" "${nocollection[@]}") > ${identifier}DatesCompiled.tab
 
 # Now that we have the dates extracted, let's get the data out in the open
-mkdir ${identifier}Genomes
-mkdir ${identifier}GFF
-mkdir ${identifier}GBK
-unzip -j RefseqGenomes${identifier}.zip ncbi_dataset/data/GCF*/*fna -d ${identifier}Genomes
-unzip -j RefseqGenomes${identifier}.zip ncbi_dataset/data/GCF*/*gff3 -d ${identifier}GFF
-unzip -j RefseqGenomes${identifier}.zip ncbi_dataset/data/GCF*/*gbff -d ${identifier}GBK
+mkdir -p ${identifier}Genomes
+#mkdir ${identifier}GFF
+#mkdir ${identifier}GBK
+unzip -j RefseqGenomes${identifier}.zip ncbi_dataset/data/GCF*/*fna -d ${identifier}Genomes > /dev/null 2> /dev/null
+#unzip -j RefseqGenomes${identifier}.zip ncbi_dataset/data/GCF*/*gff -d ${identifier}GFF
+#unzip -j RefseqGenomes${identifier}.zip ncbi_dataset/data/GCF*/*gbff -d ${identifier}GBK
 
 # Some quick niceties here for myself
-rename .gff3 .gff ${identifier}GFF/*.gff3
-rename .gbff .gbk ${identifier}GFF/*.gbff
+#rename .gff3 .gff ${identifier}GFF/*.gff3
+#rename .gbff .gbk ${identifier}GFF/*.gbff
 
 printf "Data from $taxa has been successfully downloaded!"

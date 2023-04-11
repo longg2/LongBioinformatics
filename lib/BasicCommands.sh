@@ -13,7 +13,7 @@ FileIdentificationInFunction(){ # Since I can't export Arrays, this here is a wo
 	local location=$2
 
 	# Finding the indices which have the same samplename
-	sampleFiles=( $(find -L $location -name "${sample}*" -type f -exec basename {} \;) )
+	sampleFiles=( $(find -L $location -regex "${sample}\..*|${sample}_.*" -type f -exec basename {} \;) )
 	#sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
 }
 FileIdentification(){ # Extract Files from an array using results from another array
@@ -21,7 +21,7 @@ FileIdentification(){ # Extract Files from an array using results from another a
 	local arrayFiles=$files
 
 	# Finding the indices which have the same samplename
-	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
+	sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "${sample}\.|${sample}_" | tr '\012' ' '))
 }
 FileExtractionInFunction(){ # Assign files to their variables.  Assumes that $sampleFiles and $sample exists
 	# Unsetting variables in case they're already defined from a previous run 
