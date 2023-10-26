@@ -192,8 +192,11 @@ FastpWrapperAncientNoAdapter(){ # Convenient Wrapper for parallelization
 FastpWrapperAncient(){ # Convenient Wrapper for parallelization
 	local sample=$1
 
+	#printf "sample:\t$sample\nFolder:\t$folder\n"
 	FileIdentificationInFunction $sample $folder
+	#printf '%s\n' "${sampleFiles[@]}"
 	FileExtractionInFunction $folder
+	#printf "R1:\t$r1\nR2:\t$r2\n"
 	AncientTrimmingFastp $r1 $r2 $sample $out $njobs $ncores 2> ${out}FastpLogNorm/$sample.log
 } 
 FastpWrapperAncientAssembly(){ # Convenient Wrapper for parallelization

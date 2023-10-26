@@ -37,7 +37,7 @@ identifier="T${taxa}D$(date +"%Y%m%d")"
 # This downloads the genomes, gff, and gbk files from NCBI
 datasets download genome taxon $taxa --assembly-source RefSeq \
        	--filename RefseqGenomes${identifier}.zip \
-       	--assembly-level chromosome,complete --exclude-atypical \
+       	--assembly-level contig,scaffold,chromosome,complete --exclude-atypical \
        	--include genome,gff3,gbff
 
 # Now, we'll start with extracting the dates. At least for me, these are fairly important for my phylogenies.
@@ -46,8 +46,11 @@ datasets download genome taxon $taxa --assembly-source RefSeq \
 # submission date. Some of the older assemblies were uploaded years before their associated biosample
 
 dataformat tsv genome --package RefseqGenomesT${taxa}D$(date +"%Y%m%d").zip \
-	--fields accession,assminfo-biosample-publication-date,assminfo-submission-date,assminfo-biosample-attribute-name,assminfo-biosample-attribute-value > ${identifier}DatesRaw.tab
+	--fields accession,assminfo-biosample-publication-date,assminfo-release-date,assminfo-biosample-attribute-name,assminfo-biosample-attribute-value > ${identifier}DatesRaw.tab
 
+dataformat tsv genome --package RefseqGenomesT${taxa}D$(date +"%Y%m%d").zip \
+	--fields accession,assminfo-biosample-attribute-name,assminfo-biosample-attribute-value > ${identifier}OtherMetaData.tab
+	#
 # Loading the two different version in memory
 mapfile -t collection < <(grep "collection_date" ${identifier}DatesRaw.tab)
 mapfile -t nocollection < <(cut -f 1-3 ${identifier}DatesRaw.tab | tail -n +2 | sort -u)
@@ -67,4 +70,4 @@ unzip -j RefseqGenomes${identifier}.zip ncbi_dataset/data/GCF*/*fna -d ${identif
 #rename .gff3 .gff ${identifier}GFF/*.gff3
 #rename .gbff .gbk ${identifier}GFF/*.gbff
 
-printf "Data from $taxa has been successfully downloaded!"
+printf "Data from $taxa has been successfully downloaded!\n"

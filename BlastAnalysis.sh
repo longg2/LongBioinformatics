@@ -134,7 +134,7 @@ ls -1 $folder | parallel -j $ncores --bar "GzipDetection {} $folder"
 # Now to detect if the file in IntGzip is fastq, fasta, or other and convert the file
 mkdir -p ${out}FastaOnly
 echo "Converting FastQ to Fasta"
-ls -1 IntGzip | parallel -j $ncores --bar "FastaorFastq {} ${out}FastaOnly"
+ls -1rt IntGzip/* | parallel -j $ncores --bar "FastaorFastq {} ${out}FastaOnly"
 # parallel -j $ncores --bar "FastaorFastq {} ${out}FastaOnly" ::: IntGzip/*
 rm -rf IntGzip
 
@@ -148,7 +148,7 @@ else
 
 	mkdir -p ${out}prinseqLog
 	echo "String Deduplciation with prinseq"
-	ls -1 ${out}FastaOnly | parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null"
+	ls -1rt ${out}FastaOnly/* | parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null"
 	#parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null" ::: ${out}FastaOnly/*
 fi
 rm -rf ${out}FastaOnly
@@ -157,7 +157,7 @@ rm -rf ${out}FastaOnly
 if [[ $subsample != 0 ]]; then
 	echo "Subsampling the files to ~$subsample reads"
 	mkdir -p ${out}Subsample
-	ls -1 ${out}StringDedup | parallel -j $ncores --bar "RandomFastaSelection {} $subsample > ${out}Subsample/{/}"
+	ls -1rt ${out}StringDedup/* | parallel -j $ncores --bar "RandomFastaSelection {} $subsample > ${out}Subsample/{/}"
 #	parallel -j $ncores --bar "RandomFastaSelection {} $subsample > ${out}Subsample/{/}" ::: ${out}StringDedup/*
 	#parallel -j $ncores --bar "seqkit sample {} -n $subsample > ${out}Subsample/{/} 2> /dev/null" ::: ${out}StringDedup/*
 fi
@@ -195,7 +195,7 @@ if [[ $lca == "TRUE" ]]; then
 	mkdir -p ${out}LCA
 	# Because taxonkit defaults to 4 cores, we don't want to accidentally swamp the machines
 	let taxonKitcores=$ncores/8 # 8 Because I'm using two instances of taxonkit per script
-	ls -1 ${out}BlastResults | parallel -j $taxonKitcores --bar "LCA {}"
+	ls -1rt ${out}BlastResults/* | parallel -j $taxonKitcores --bar "LCA {}"
 	#parallel -j $taxonKitcores --bar "LCA {}" ::: ${out}BlastResults/*
 fi
 
@@ -204,8 +204,8 @@ fi
 ###############################
 echo "Compressing the blast files"
 
-ls -1 ${out}BlastResults | parallel -j $ncores --bar "gzip {}"
-ls -1 ${out}StringDedup | parallel -j $ncores --bar "gzip {}"
+ls -1rt ${out}BlastResults/* | parallel -j $ncores --bar "gzip {}"
+ls -1rt ${out}StringDedup/* | parallel -j $ncores --bar "gzip {}"
 #parallel -j $ncores --bar "gzip {}" ::: ${out}BlastResults/*tab
 
 echo "Blast is Finished!"

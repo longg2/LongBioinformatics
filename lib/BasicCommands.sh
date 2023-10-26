@@ -13,7 +13,8 @@ FileIdentificationInFunction(){ # Since I can't export Arrays, this here is a wo
 	local location=$2
 
 	# Finding the indices which have the same samplename
-	sampleFiles=( $(find -L $location -regex "${sample}\..*|${sample}_.*" -type f -exec basename {} \;) )
+	sampleFiles=( $(find -L $location -name "${sample}*" -type f -exec basename {} \;) )
+	#sampleFiles=( $(find -L $location -regex "${sample}\..*|${sample}_.*" -type f -exec basename {} \;) )
 	#sampleFiles=($(printf '%s\n' "${arrayFiles[@]}" | grep "$sample" | tr '\012' ' '))
 }
 FileIdentification(){ # Extract Files from an array using results from another array
@@ -40,12 +41,12 @@ FileExtractionInFunction(){ # Assign files to their variables.  Assumes that $sa
 
 	# Identifying the files
 	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r1\.f*|_1\.f*|_r1_0.*|_1$"; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r1\.f*|_1\.f*|_r1_0.*|_1$')
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i "r1\.f*|_1\.f*|_r1_0.*|_1$")
 	        r1="$folderExtraction/$fileName"
 	fi
 
 	if printf '%s\n' "${sampleFiles[@]}" | grep -P -i -q "r2\.f*|_2\.f*|_r2_0.*|2$"; then
-		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i 'r2\.f*|_2\.f*|_r2_0.*|2$')
+		fileName=$(printf '%s\n' "${sampleFiles[@]}" | grep -P -i "r2\.f*|_2\.f*|_r2_0.*|2$")
 	        r2="$folderExtraction/$fileName"
 	fi
 

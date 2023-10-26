@@ -3,6 +3,20 @@ SPAdesFunction(){
 	spades --isolate -1 $r1 -2 $r2 --merged $merged -t $ncores -o ${out}/$sample
 }
 
+SPAdesAncientFunctionV2(){
+	local sample=$1
+	local folderFunction=$2
+
+	FileIdentificationInFunction $sample $folderFunction
+	printf "${sampleFiles[0]}\n"
+	FileExtractionInFunction $folderFunction
+
+	printf "Forward:\t$r1\nReverse:\t$r2\nMerged:\t$merged\n"
+
+	/home/sam/bin/spades --meta -1 $r1 -2 $r2 --merged $merged -t $ncores -o ${out}/$sample -k 15,21,29 # The kmers are what let it run with the smaller read lengths
+
+}
+
 SPAdesAncientFunction(){
 	local sample=$1
 	local folderFunction=$2
