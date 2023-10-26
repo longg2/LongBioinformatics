@@ -1,5 +1,76 @@
 #! /usr/bin/env bash
 
+STARMapping(){ # STAR Mapping.  Automatically determines if merged or paired.
+	if [ "$merged" != "NA" ]; then # If I found a merged file
+	#if [ -v merged ]; then # If I found a merged file
+		STAR --runThreadN $ncores --genomeDir $ref --readFilesIn $merged \
+			--readFilesCommand gunzip -c --outFileNamePrefix tmp/tmpM.bam
+
+		samtools view -b -h -F 4 -m $len -q $qual -U tmpMBad.bam tmp/tmpM.bam |\
+			samtools sort -	> tmpM.bam  
+		
+		samtools fastq tmpMBad.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
+	fi
+	
+	if [[ "$r1" != "NA" && "$r2" == "NA" ]]; then # If I found a single read
+		STAR --runThreadN $ncores --genomeDir $ref --readFilesIn $r1 \
+			--readFilesCommand gunzip -c --outFileNamePrefix tmp/tmpS.bam
+
+		samtools view -b -h -F 4 -m $len -q $qual -U tmpSBad.bam tmp/tmpS.bam |\
+			samtools sort -	> tmpS.bam  
+	
+		samtools fastq tmpS.bam | gzip > ${out}UnmappedReads/${sample}_Single.fastq.gz
+
+	fi
+
+	if [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then # If I found a Paired set
+	#if [ -v r1 ]; then # If we have paired reads
+		STAR --runThreadN $ncores --genomeDir $ref --readFilesIn $r1 $r2 \
+			--readFilesCommand gunzip -c --outFileNamePrefix tmp/tmpP.bam
+	
+		samtools view -b -h -F 4 -m $len -q $qual -U tmpPBad.bam tmp/tmpP.bam |\
+		samtools sort - > tmpP.bam 
+		
+		samtools fastq -c 6 tmpPBad.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 
+
+	
+	fi
+	
+	# Merging the files if needed.  Otherwise, we can ignore and simply mv it
+	#if [ -v merged ] && [ -v r1 ]; then
+	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
+		#echo "MERGED and PAIRED"
+		samtools merge -r -f tmpMerged.bam tmpM.bam tmpP.bam 
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpMerged.bam
+		samtools merge -f ${out}UnmappedBam/$sample.bam tmpMBad.bam tmpPBad.bam
+		#samtools merge -f ${out}MQ0Bam/$sample.bam tmpMQual0.bam tmpPQual0.bam
+		rm tmpP* tmpM*
+	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ] && [ "$r2" == "NA" ]; then
+	#elif [ -v merged ] && [ -z ${r1+x} ]; then
+		#echo "MERGED"
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpM.bam
+		#mv tmpM.bam ${out}MappedReads/$sample.bam 
+		mv tmpMBad.bam ${out}UnmappedBam/$sample.bam 
+		#mv tmpMQual0.bam ${out}MQ0Bam/$sample.bam 
+	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" == "NA" ]; then
+	#elif [ -v merged ] && [ -z ${r1+x} ]; then
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpS.bam
+		#mv tmpS.bam  ${out}MappedReads/$sample.bam 
+		mv tmpSBad.bam ${out}UnmappedBam/$sample.bam 
+		#mv tmpSQual0.bam ${out}MQ0Bam/$sample.bam 
+	else
+		#echo "PAIRED"
+		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpP.bam
+		#mv tmpP.bam ${out}MappedReads/$sample.bam
+		mv tmpPBad.bam ${out}UnmappedBam/$sample.bam 
+		#mv tmpPQual0.bam ${out}MQ0Bam/$sample.bam 
+	fi
+
+	# Deleting temporary files
+	rm tmp*
+
+}
+
 alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 	if [ "$merged" != "NA" ]; then # If I found a merged file
 	#if [ -v merged ]; then # If I found a merged file
