@@ -25,7 +25,7 @@ function DateParsing(first, second){
 	}else if(field1[3] > field2[3]){
 		print $1,second
 	}else{ # Otherwise, they must be the same date!
-		print $1,first
+		print $1,first,"*"
 	}
 
 	}
