@@ -1,6 +1,6 @@
 
 SPAdesFunction(){
-	spades --isolate -1 $r1 -2 $r2 --merged $merged -t $ncores -o ${out}/$sample
+	spades -1 $r1 -2 $r2 --merged $merged -t $ncores -o ${out}/$sample
 }
 
 SPAdesAncientFunctionV2(){

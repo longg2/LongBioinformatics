@@ -4,9 +4,9 @@ STARMapping(){ # STAR Mapping.  Automatically determines if merged or paired.
 	if [ "$merged" != "NA" ]; then # If I found a merged file
 	#if [ -v merged ]; then # If I found a merged file
 		STAR --runThreadN $ncores --genomeDir $ref --readFilesIn $merged \
-			--readFilesCommand gunzip -c --outFileNamePrefix tmp/tmpM.bam
+			--readFilesCommand gunzip -c --outFileNamePrefix tmp/tmpM
 
-		samtools view -b -h -F 4 -m $len -q $qual -U tmpMBad.bam tmp/tmpM.bam |\
+		samtools view -b -h -F 4 -m $len -q $qual -U tmpMBad.bam tmp/tmpMAligned.out.sam |\
 			samtools sort -	> tmpM.bam  
 		
 		samtools fastq tmpMBad.bam | gzip > ${out}UnmappedReads/${sample}.fastq.gz
@@ -14,9 +14,9 @@ STARMapping(){ # STAR Mapping.  Automatically determines if merged or paired.
 	
 	if [[ "$r1" != "NA" && "$r2" == "NA" ]]; then # If I found a single read
 		STAR --runThreadN $ncores --genomeDir $ref --readFilesIn $r1 \
-			--readFilesCommand gunzip -c --outFileNamePrefix tmp/tmpS.bam
+			--readFilesCommand gunzip -c --outFileNamePrefix tmp/tmpS
 
-		samtools view -b -h -F 4 -m $len -q $qual -U tmpSBad.bam tmp/tmpS.bam |\
+		samtools view -b -h -F 4 -m $len -q $qual -U tmpSBad.bam tmp/tmpSAligned.out.sam |\
 			samtools sort -	> tmpS.bam  
 	
 		samtools fastq tmpS.bam | gzip > ${out}UnmappedReads/${sample}_Single.fastq.gz
@@ -26,9 +26,9 @@ STARMapping(){ # STAR Mapping.  Automatically determines if merged or paired.
 	if [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then # If I found a Paired set
 	#if [ -v r1 ]; then # If we have paired reads
 		STAR --runThreadN $ncores --genomeDir $ref --readFilesIn $r1 $r2 \
-			--readFilesCommand gunzip -c --outFileNamePrefix tmp/tmpP.bam
+			--readFilesCommand gunzip -c --outFileNamePrefix tmp/tmpP
 	
-		samtools view -b -h -F 4 -m $len -q $qual -U tmpPBad.bam tmp/tmpP.bam |\
+		samtools view -b -h -F 4 -m $len -q $qual -U tmpPBad.bam tmp/tmpPAligned.out.sam |\
 		samtools sort - > tmpP.bam 
 		
 		samtools fastq -c 6 tmpPBad.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 

@@ -114,7 +114,7 @@ diamondCMD() { # The Meat and Potatoes of the script
 
 	echo "Running Diamond for $sample"
 	if [ "$blast" == "blastp" ]; then
-		diamond blastp --db $db --query $in --outfmt "6 std staxid" --evalue $Eval --threads $ncores --out ${out}BlastResults/$sample.tab 2>> BlastPWarnings.log &
+		diamond blastp --db $db --query $in --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore staxids --evalue $Eval --threads $ncores --out ${out}BlastResults/$sample.tab 2>> BlastPWarnings.log &
 		pid=$! # Getting the PID of the blast run
 		trap "kill $pid 2> /dev/null" EXIT # If the script is killed, kill the blast run as well
 
