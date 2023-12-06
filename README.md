@@ -1,9 +1,9 @@
 # Bioinformatic Scripts used by George Long
 The scripts located here have been used for the following projects:
 1. [Collapse of the mammoth-steppe in central Yukon as revealed by ancient environmental DNA](https://doi.org/10.1038/s41467-021-27439-6) <-- Not cited as repo was created after the paper was published and results were only present in the supplementary materials. Only MapDamageLoop was used
-2. [Ancient Escherichia coli](https://github.com/longg2/AncientEcoli)
-3. [Ancient Brucella melitensis](https://github.com/longg2/Brucella)
-4. ???
+2. [Ancient _Escherichia coli_](https://github.com/longg2/AncientEcoli)
+3. [Ancient _Brucella melitensis_](https://github.com/longg2/Brucella)
+4. [Permafrost microbial communities follow shifts in vegetation, soils, and megafauna extinctions in Late Pleistocene NW North America](https://doi.org/10.1002/edn3.493)
 
 Please note that there are some idiosyncrasies present in the scripts due to the specifics of the machine I'm using (take the [Core SNP Phylogeny](https://github.com/longg2/LongBioinformatics/blob/master/CoreSNPPhylogenetics.sh) as an example). You'll need to edit scripts as needed to ensure that they'll work for you.
 
