@@ -126,16 +126,8 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 			samtools fastq -c 6 tmpPBad.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 
 
 		else
+			echo "PANIC"
 			samtools view -h -F 4 -m $len -q 0 tmpPBad.bam > tmpPQual0.bam 
-
-			## Apr 20 2021 -- Want to separate the poor hits from the reads with multiple hits
-			#samtools fastq -f 4 -c 6 tmpPBad.bam -1 tmpUnmapped_r1.fastq.gz -2 tmpUnmapped_r2.fastq.gz -s /dev/null # All the unmapped Reads
-			## R1 reads
-			#samtools view -F 4 tmpPBad.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip -c | cat tmpUnmapped_r1.fastq.gz - > ${out}UnmappedReads/${sample}_r1.fastq.gz # The reads which were poor matches
-			#samtools view -m $len -F 4 tmpPBad.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 0){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r1.fastq.gz # The Multimappers
-			### R2 reads
-			#samtools view -F 4 tmpPBad.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 != 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip -c | cat tmpUnmapped_r2.fastq.gz - > ${out}UnmappedReads/${sample}_r2.fastq.gz
-			#samtools view -m $len -F 4 tmpPBad.bam | ~/Scripts/V3Folder/SamQualInttoBin.awk | awk '{if($5 == 0 && substr($2, length($2) - 7, length($2) - 7) == 1){print "@"$1"\n"$10"\n+\n"$11}}'| gzip > ${out}Qual0Reads/${sample}_r2.fastq.gz # The Multimappers
 		fi
 	
 	fi
@@ -147,7 +139,9 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 		samtools merge -r -f tmpMerged.bam tmpM.bam tmpP.bam 
 		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpMerged.bam
 		samtools merge -f ${out}UnmappedBam/$sample.bam tmpMBad.bam tmpPBad.bam
-		samtools merge -f ${out}MQ0Bam/$sample.bam tmpMQual0.bam tmpPQual0.bam
+		if [ "$multi" == "TRUE" ]; then
+			samtools merge -f ${out}MQ0Bam/$sample.bam tmpMQual0.bam tmpPQual0.bam
+		fi
 		rm tmpP* tmpM*
 	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
@@ -155,7 +149,10 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpM.bam
 		#mv tmpM.bam ${out}MappedReads/$sample.bam 
 		mv tmpMBad.bam ${out}UnmappedBam/$sample.bam 
-		mv tmpMQual0.bam ${out}MQ0Bam/$sample.bam 
+
+		if [ "$multi" == "TRUE" ]; then
+			mv tmpMQual0.bam ${out}MQ0Bam/$sample.bam 
+		fi
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpS.bam
@@ -167,12 +164,13 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpP.bam
 		#mv tmpP.bam ${out}MappedReads/$sample.bam
 		mv tmpPBad.bam ${out}UnmappedBam/$sample.bam 
-		mv tmpPQual0.bam ${out}MQ0Bam/$sample.bam 
+		if [ "$multi" == "TRUE" ]; then
+			mv tmpPQual0.bam ${out}MQ0Bam/$sample.bam 
+		fi
 	fi
 
 	# Deleting temporary files
 	rm tmp*
-
 }
 
 bowtie2Mapping(){ # Bowtie2 Mapping. Using local mapping with the very sensitive flag....

@@ -17,6 +17,7 @@ usage() { printf 'SPAdes Ancient Assembly Script V0.5
         -i\tThe folder that contains the Raw sequencing files
 	-o\tThe output prefix (Default: Assembly)
 	-n\tNumber of CPU Threads to be used (Default: 16)
+	-m\tUse metaSpades
 	-k\tMin Length (Default: 30)
 	-l\tLog File Name (Default: $date)
         -h\tShow this help message and exit
@@ -53,10 +54,10 @@ while getopts "i:n:o:l:c:k:hm" arg; do
                         out=${OPTARG}
                         #echo "The raw sequencing files are located in $raw"
                         ;;
-		c)
-			chomp=${OPTARG}
-			#export chomp
-			;;
+	#	c)
+	#		chomp=${OPTARG}
+	#		#export chomp
+	#		;;
 		k)
 			len=${OPTARG}
 			#export len
