@@ -7,11 +7,15 @@ script_full_path=$(dirname $0)
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/CoreSNPFunctions.sh # This loads the basic things I need.
 
-usage() { printf "Core SNP phylogeny creation V2.0
+usage() { printf "Core SNP phylogeny creation V3.0
 	Given a folder of sequences, create a core snp phylogeny using:	Snippy,
        	Gubbins, snp-sites, and IQTREE-2. The nucleotide model will be
 	automatically chosen with ascertainment bias.
-	
+
+	V3 Changes: Now using an updated version of Gubbin which runs IQTREE
+	in the background. Using it to keep everything consistent. Will
+	continue to use a separate run of IQTREE.
+
 	V2 Changes: Snippy manifest could not handle bam files apparently? Due
 	to this, I've created my own implementation of the script which uses
 	parallel and file extension detection. Have also increased the default
@@ -147,23 +151,26 @@ mv core* ${out}Snippy/
 snippy-clean_full_aln ${out}Snippy/core.full.aln > ${out}Snippy/clean.full.aln
 
 ########## Time for Gubbins #############
-echo "Running Gubbins and snp-sites"
+echo "Running Gubbins"
 conda activate phylogenies # Need to activate
 
 # Running Gubbins is relatively simple, if potentially long...
 run_gubbins.py ${out}Snippy/clean.full.aln --outgroup $outgroup --threads $ncores \
-	--filter_percentage $filter --prefix ${out}Gubbins/RecombMask > ${out}Gubbins.log
-
-if [ $? -eq 1 ]; then
-	echo "Gubbins failed. Please look at the logs to figure out where"
-	exit 1
-fi
-
+	--filter_percentage $filter -d --first-tree-builder iqtree-fast -t iqtree \
+       	--bootstrap $bootstrap --best-model --first-model GTRGAMMA \ 
+       	--prefix ${out}Gubbins/RecombMask > ${out}Gubbins.log
+	#
+#
+#if [ $? -eq 1 ]; then
+#	echo "Gubbins failed. Please look at the logs to figure out where"
+#	exit 1
+#fi
+#
 snp-sites -c ${out}Gubbins/RecombMask.filtered_polymorphic_sites.fasta > ${out}Gubbins/clean.core.aln
-
-############### IQ TREE 2 ################
+#
+################ IQ TREE 2 ################
 echo "Building the phylogeny"
-iqtree -s ${out}Gubbins/clean.core.aln -o $outgroup -m MFP+ASC \
+iqtree2 -s ${out}Gubbins/clean.core.aln -o $outgroup -m MFP+ASC \
 	-T AUTO --threads-max $ncores \
 	-b $bootstrap --prefix ${out}IQTREE/Phylogeny --keep-ident
 
