@@ -16,13 +16,13 @@ snippyParallel(){ # Want this to figure out what kind of Snippy run its doing
 	# This is what will run the correct version of the snippy command
 	if echo $fileExtension | grep -P -i -q "bam"; then
 	#	echo "BAM"
-		snippy --bam $seqFile --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 10 --force --quiet 
+		snippy --bam $seqFile --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 8 --force --quiet 
 	elif echo $fileExtension | grep -P -i -q "fastq|fq"; then
 	#	echo "Single Ended (Merged?)"
-		snippy --se $seqFile --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 10 --force --quiet
+		snippy --se $seqFile --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 8 --force --quiet
 	elif echo $fileExtension | grep -P -i -q "fasta|fna|fa"; then
 	#	echo "Contigs/Genomes"
-		snippy --ctgs $seqFile --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 10 --force --quiet
+		snippy --ctgs $seqFile --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 8 --force --quiet
 	else
 		echo "I don't know how to deal with this!"
 		exit 1

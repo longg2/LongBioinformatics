@@ -14,7 +14,8 @@ usage() { printf "Core SNP phylogeny creation V3.0
 
 	V3 Changes: Now using an updated version of Gubbin which runs IQTREE
 	in the background. Using it to keep everything consistent. Will
-	continue to use a separate run of IQTREE.
+	continue to use a separate run of IQTREE. Decrease the default from
+	10 to 8 CPU threads.
 
 	V2 Changes: Snippy manifest could not handle bam files apparently? Due
 	to this, I've created my own implementation of the script which uses
@@ -125,28 +126,13 @@ conda activate pangenome
 
 ############# Running SNIPPY ###############
 # Getting the SNPs
-parJobs=$(echo "scale=0;var1=$ncores/10;var1"|bc) # Will round down!!!
+parJobs=$(echo "scale=0;var1=$ncores/8;var1"|bc) # Will round down!!!
 
 parallel -j $parJobs --bar "snippyParallel {} $mincov $reference ${out}Snippy 2> /dev/null" ::: ${folder}/*
 
 snippy-core --ref $reference ${out}Snippy/*
 
 mv core* ${out}Snippy/
-
-# First, we need to make a manifest file for snippy-multi
-#find -L ~+/$folder -type f | $script_full_path/lib/snippyManifest.awk > ${out}snippyManifest.txt
-
-# Running Snippy. Because of it functions, we'll be piping the log to nowhere
-#echo "Running snippy-multi"
-
-#cd ${out}Snippy
-#tmp=$(echo $OLDPWD) # So that I can work without issue...
-#snippy-multi $tmp/${out}snippyManifest.txt --mincov $mincov --mapqual 30 --basequal 20 --ref $tmp/$reference --cpus $ncores --quiet | bash 2> $tmp/${out}SnippyLog.log
-
-#if [ $? -eq 1 ]; then
-#	echo "Snippy failed. Please look at the logs to figure out where"
-#	exit 1
-#fi
 
 snippy-clean_full_aln ${out}Snippy/core.full.aln > ${out}Snippy/clean.full.aln
 
@@ -156,15 +142,15 @@ conda activate phylogenies # Need to activate
 
 # Running Gubbins is relatively simple, if potentially long...
 run_gubbins.py ${out}Snippy/clean.full.aln --outgroup $outgroup --threads $ncores \
-	--filter_percentage $filter -t iqtree \
+	--filter-percentage $filter --tree-builder iqtree \
        	--bootstrap $bootstrap --best-model --first-model GTRGAMMA \ 
        	--prefix ${out}Gubbins/RecombMask > ${out}Gubbins.log
 	#
 #
-#if [ $? -eq 1 ]; then
-#	echo "Gubbins failed. Please look at the logs to figure out where"
-#	exit 1
-#fi
+if [ $? -eq 1 ]; then
+	echo "Gubbins failed. Please look at the logs to figure out where"
+	exit 1
+fi
 #
 snp-sites -c ${out}Gubbins/RecombMask.filtered_polymorphic_sites.fasta > ${out}Gubbins/clean.core.aln
 #
@@ -172,7 +158,7 @@ snp-sites -c ${out}Gubbins/RecombMask.filtered_polymorphic_sites.fasta > ${out}G
 echo "Building the phylogeny"
 iqtree2 -s ${out}Gubbins/clean.core.aln -o $outgroup -m MFP+ASC \
 	-T AUTO --threads-max $ncores \
-	-b $bootstrap --prefix ${out}IQTREE/Phylogeny --keep-ident
+	-b $bootstrap --prefix ${out}IQTREE/Phylogeny
 
 if [ $? -eq 1 ]; then
 	echo "IQTREE failed. Please look at the logs to figure out where"
