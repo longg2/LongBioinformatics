@@ -1,4 +1,5 @@
 #! /usr/bin/env bash
+
 ######################################
 ### Functions that I'll be calling ###
 ######################################
@@ -8,6 +9,19 @@ export script_full_path
 
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/MappingFunctions.sh # The mapping functions
+
+BCFtoolsWrapper() { # This is what's going to call my snps
+	local BamFile=$1 # The bam file
+	local Reference=$2 # The reference file
+	local depth=$3
+	local qual=$4
+	local ploidy=$5
+
+	bcftools mpileup -f $Reference -O u $BamFile |\
+		bcftools call --ploidy $ploidy -O u -v -m |\ # Calling the SNPs
+		bcftools filter -e "QUAL<${qual} || DP <${depth}" -O v |\ # Filtering out the low quality and depth SNPs
+		bcftools norm -f $Reference # Normalizing the variants and outputting the results to STDOUT
+}
 
 usage() { printf "BCFtools SNP calling V0.1
 	Standardizing the process in which I call SNPs
@@ -86,7 +100,7 @@ while getopts "i:o:p:q:r:l:d:n:hm" arg; do
 done
 
 # Testing if files options are missing
-if [ -d ${folder} ] || [ -s ${ref} ]; then
+if [ -z ${folder+x} ] || [ -z ${ref+x} ]; then
 	echo "You are missing either the Input folder or the reference"
 	usage
 	exit 1
@@ -102,25 +116,14 @@ log | tee $log # The inital log file
 mkdir -p ${out}
 
 # Need to check if the file has been indexed
-if [[ ! -n $(find . -name "${ref}.fai") ]]; then # This is testing if we're not finding the fai file.
-	echo "${ref} has not been indexed. Running `samtools faidx ${ref}`"
-	
-	samtools faidx ${ref} # Indexing the file!
+if [[ -n $(find . -path "${ref}.fai") ]]; then # This is testing if we're not finding the fai file.
+	echo "${ref}.fai has been found!"
 else
+	echo "${ref} has not been indexed. Running: samtools faidx ${ref}"
+	samtools faidx ${ref} # Indexing the file!
+fi
 
-BCFtoolsWrapper(){ # This is what's going to call my snps
-	local BamFile=$1 # The bam file
-	local Reference=$2 # The reference file
-	local depth=$3
-	local qual=$4
-	local ploidy=$5
-
-	bcftools mpileup -f $Reference -O u $BamFile |\ # We're piling up the vcf file here
-		bcftools call --ploidy $ploidy -O u -v -m |\ # Calling the SNPs
-		bcftools filter -e "QUAL<${qual} || DP <${depth}" -O v |\ # Filtering out the low quality and depth SNPs
-		bcftools norm -f $Reference # Normalizing the variants and outputting the results to STDOUT
-}
 
 export -f BCFtoolsWrapper
 # Now to actually run this
-parallel -j $ncores --bar "BCFtoolsWrapper {} $ref $depth $qual $ploidy > ${out}/{/.}.vcf " ::: ${folder}/*
+parallel --dry-run -j 1 --bar "BCFtoolsWrapper {} $ref $depth $qual $ploidy > ${out}/{/.}.vcf " ::: ${folder}/*

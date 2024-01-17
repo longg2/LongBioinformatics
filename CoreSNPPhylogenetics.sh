@@ -141,12 +141,18 @@ echo "Running Gubbins"
 conda activate phylogenies # Need to activate
 
 # Running Gubbins is relatively simple, if potentially long...
-run_gubbins.py ${out}Snippy/clean.full.aln --outgroup $outgroup --threads $ncores \
-	--filter-percentage $filter --tree-builder iqtree \
-       	--bootstrap $bootstrap --best-model --first-model GTRGAMMA \ 
-       	--prefix ${out}Gubbins/RecombMask > ${out}Gubbins.log
+#run_gubbins.py --outgroup $outgroup --threads $ncores \
+#	--filter-percentage $filter --tree-builder iqtree \
+#       	--bootstrap $bootstrap --best-model --first-model GTRGAMMA \ 
+#       	--prefix ${out}Gubbins/RecombMask ${out}Snippy/clean.full.aln > ${out}Gubbins.log
 	#
 #
+run_gubbins.py --outgroup $outgroup --threads $ncores \
+	--filter-percentage $filter \
+       	--first-tree-builder iqtree-fast --tree-builder iqtree \
+	--bootstrap $bootstrap --best-model --first-model GTRGAMMA \
+	--prefix ${out}Gubbins/RecombMask ${out}Snippy/clean.full.aln
+
 if [ $? -eq 1 ]; then
 	echo "Gubbins failed. Please look at the logs to figure out where"
 	exit 1
