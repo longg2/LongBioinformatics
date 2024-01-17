@@ -33,7 +33,6 @@ usage() { printf "BCFtools SNP calling V0.1
 	-d\tMinimum SNP depth (Default: 10)
 	-q\tMinimum SNP Quality (Default: 100)
 	-p\tPloidy (Default: $ploidy)
-	-n\tNumber of CPU Threads to be used when parallelizing (Default: 8)
 	-l\tLog File Name (Default: $log)
         -h\tShow this help message and exit\n" 1>&2; exit 1; }
 
@@ -58,14 +57,13 @@ declare -i qual=30
 declare -i depth=30
 declare -i ploidy=1
 out="BCFToolsOut"
-declare -i ncores=8
 log="$(date +'%Y%m%d').log"
 
 ##############
 ### The UI ###
 ##############
 
-while getopts "i:o:p:q:r:l:d:n:hm" arg; do
+while getopts "i:o:p:q:r:l:d:hm" arg; do
         case $arg in
                 i)
                         declare -r folder=${OPTARG}
@@ -88,9 +86,6 @@ while getopts "i:o:p:q:r:l:d:n:hm" arg; do
                         ;;
                 d)
                         declare -i len=${OPTARG}
-                        ;;
-                n)
-                        declare -i ncores=${OPTARG}
                         ;;
                 h | *)
                         usage
@@ -126,4 +121,16 @@ fi
 
 export -f BCFtoolsWrapper
 # Now to actually run this
-parallel --dry-run -j 1 --bar "BCFtoolsWrapper {} $ref $depth $qual $ploidy > ${out}/{/.}.vcf " ::: ${folder}/*
+total=${#files[@]}
+count=0
+
+ProgressBar $count $total
+for file in ${files[@]}; do # Iterating over an array of Samples
+
+	printf "BCFtoolsWrapper $file $ref $depth $qual $ploidy > ${out}/$(basename $file .bam).vcf\n"
+	BCFtoolsWrapper $file $ref $depth $qual $ploidy > ${out}/$(basename $file .bam).vcf
+
+	count=$(echo "$count + 1" | bc)
+	ProgressBar $count $total
+
+done
