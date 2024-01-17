@@ -8,7 +8,7 @@ export script_full_path
 
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/MappingFunctions.sh # The mapping functions
-usage() { printf 'BWA aln Mapping V1.1
+usage() { printf "BWA aln Mapping V1.1
 	Mapping using aln is more complicated than it warrants,
 	so here is a useful wrapper that will hopefully make life
 	easier.
@@ -22,8 +22,8 @@ usage() { printf 'BWA aln Mapping V1.1
 	-d\tDeduplicate the bam files? (Default: FALSE)
 	-m\tSeparate the MultiMappers? (Default: FALSE)
 	-n\tNumber of CPU Threads to be used (Default: 8)
-	-l\tLog File Name (Default: $date)
-        -h\tShow this help message and exit\n' 1>&2; exit 1; }
+	-l\tLog File Name (Default: $log)
+        -h\tShow this help message and exit\n" 1>&2; exit 1; }
 
 log() {	printf "BWA aln settings for $(date):
 	Log File:\t${log}
