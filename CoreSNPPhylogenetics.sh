@@ -149,7 +149,7 @@ conda activate phylogenies # Need to activate
 #
 run_gubbins.py --outgroup $outgroup --threads $ncores \
 	--filter-percentage $filter \
-       	--first-tree-builder iqtree-fast --tree-builder iqtree \
+       	--tree-builder iqtree \
 	--bootstrap $bootstrap --best-model --first-model GTRGAMMA \
 	--prefix ${out}Gubbins/RecombMask ${out}Snippy/clean.full.aln
 

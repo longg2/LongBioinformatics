@@ -10,19 +10,6 @@ export script_full_path
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/MappingFunctions.sh # The mapping functions
 
-BCFtoolsWrapper() { # This is what's going to call my snps
-	local BamFile=$1 # The bam file
-	local Reference=$2 # The reference file
-	local depth=$3
-	local qual=$4
-	local ploidy=$5
-
-	bcftools mpileup -f $Reference -O u $BamFile |\
-		bcftools call --ploidy $ploidy -O u -v -m |\ # Calling the SNPs
-		bcftools filter -e "QUAL<${qual} || DP <${depth}" -O v |\ # Filtering out the low quality and depth SNPs
-		bcftools norm -f $Reference # Normalizing the variants and outputting the results to STDOUT
-}
-
 usage() { printf "BCFtools SNP calling V0.1
 	Standardizing the process in which I call SNPs
 	Will do the following: mpileup -> call -> filter -> norm
@@ -41,7 +28,6 @@ log() {	printf "BCFtools SNP settings for $(date):
 	Input folder:\t${folder}
 	Output folder:\t${out}
 	Reference:\t${ref}
-	CPU Threads:\t${ncores}
 	-------------------------------------
 	Min Quality:\t${qual}
 	Min Depth:\t${depth}
@@ -109,9 +95,10 @@ log | tee $log # The inital log file
 
 # The Folder
 mkdir -p ${out}
+mkdir -p ${out}Log
 
 # Need to check if the file has been indexed
-if [[ -n $(find . -path "${ref}.fai") ]]; then # This is testing if we're not finding the fai file.
+if [[ -n $(find $(dirname $ref) -name "$(basename $ref).fai") ]]; then # This is testing if we're not finding the fai file.
 	echo "${ref}.fai has been found!"
 else
 	echo "${ref} has not been indexed. Running: samtools faidx ${ref}"
@@ -119,18 +106,21 @@ else
 fi
 
 
-export -f BCFtoolsWrapper
 # Now to actually run this
-total=${#files[@]}
+total=$(ls -1q $folder | wc -l)
 count=0
 
 ProgressBar $count $total
-for file in ${files[@]}; do # Iterating over an array of Samples
+for file in $folder/*; do # Iterating over an array of Samples
 
-	printf "BCFtoolsWrapper $file $ref $depth $qual $ploidy > ${out}/$(basename $file .bam).vcf\n"
-	BCFtoolsWrapper $file $ref $depth $qual $ploidy > ${out}/$(basename $file .bam).vcf
+	#printf "BCFtoolsWrapper $file $ref $depth $qual $ploidy > ${out}/$(basename $file .bam).vcf\n"
+	bcftools mpileup -f $ref -O u $file 2> /dev/null |\
+		bcftools call --ploidy $ploidy -O u -v -m |\
+		bcftools filter -e "QUAL<${qual} || DP <${depth}" -O v |\
+		bcftools norm -f $ref > ${out}/$(basename $file .bam).vcf 2> ${out}Log/$(basename $file .bam).log
+	#BCFtoolsWrapper $file $ref $depth $qual $ploidy > ${out}/$(basename $file .bam).vcf
 
 	count=$(echo "$count + 1" | bc)
 	ProgressBar $count $total
-
 done
+printf "\nComplete!\n"

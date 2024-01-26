@@ -8,7 +8,7 @@ source $script_full_path/lib/BasicCommands.sh # This loads the basic things I ne
 usage() { printf 'NCBI Download Automation
 	This script will download RefSeq (Chromosomal and Complete) genomes of your chosen
 	taxa. It will also extract the dates and arrange the files in the proper order. Requires
-	the NCBI datasets program and <FILE>.awk to run properly.
+	the NCBI datasets program and NCBIDateParsing.awk to run properly.
 
         -t\tTaxa of interest
         -h\tShow this help message and exit\n' 1>&2; exit 1; }
