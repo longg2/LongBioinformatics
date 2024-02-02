@@ -24,7 +24,7 @@ KrakenAnalysis(){ # This here will do the heavy lifting for the script
 	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If paired
 		kraken2 --db $db --threads $ncores --report ${out}Reports/${sample}Paired.tab \
 			--classified-out ${out}Class/${sample}Paired.fastq --unclassified-out ${out}Unclass/${sample}Paired.fastq \
-		       --use-names $r1 --output ${out}Output/${sample}Paired.out --confidence 0.1
+		       --use-names --paired $r1 $r2 --output ${out}Output/${sample}Paired.out --confidence 0.1
 	fi
 		
 }
