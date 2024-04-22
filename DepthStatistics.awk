@@ -21,7 +21,9 @@ function CI(stdev, len){
 
 function basename(file, a, n) {
 	n = split(file, a, "/")
-	return a[n]
+	# Trying something different
+	split(a[n],b,".")
+	return b[1]
 }
 
 BEGIN{

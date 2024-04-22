@@ -37,7 +37,7 @@ identifier="T${taxa}D$(date +"%Y%m%d")"
 # This downloads the genomes, gff, and gbk files from NCBI
 datasets download genome taxon $taxa --assembly-source RefSeq \
        	--filename RefseqGenomes${identifier}.zip \
-       	--assembly-level contig,scaffold,chromosome,complete --exclude-atypical \
+       	--assembly-level scaffold,chromosome,complete --exclude-atypical \
        	--include genome,gff3,gbff
 
 # Now, we'll start with extracting the dates. At least for me, these are fairly important for my phylogenies.

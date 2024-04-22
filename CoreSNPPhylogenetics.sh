@@ -162,7 +162,7 @@ snp-sites -c ${out}Gubbins/RecombMask.filtered_polymorphic_sites.fasta > ${out}G
 #
 ################ IQ TREE 2 ################
 echo "Building the phylogeny"
-iqtree2 -s ${out}Gubbins/clean.core.aln -o $outgroup -m MFP+ASC \
+iqtree2 -s ${out}Gubbins/clean.core.aln -o Reference -m MFP+ASC \
 	-T AUTO --threads-max $ncores \
 	-b $bootstrap --prefix ${out}IQTREE/Phylogeny
 

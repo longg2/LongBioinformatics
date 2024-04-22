@@ -15,7 +15,8 @@ usage() { printf "Heterozygous SNP Calling V1.0
 	-r\tReference Sequence
 	-n\tNumber of CPU Threads to be used (Default = 10)
 	-l\tLog File Name
-	-s\tSeparate VCF Files? -o Becomes a folder name (Default = FALSE)
+	-s\tSeparate VCF Files?
+	-o\tBecomes a folder name (Default = FALSE)
 	-q\tMinimum SNP Quality calling (Default = 100)
 	-p\tPloidy of the call. For possible options, see bcftools call --ploidy ? Overwritten by -f
 	-f\tA ploidy file in the form of CHROM<TAB>FROM<TAB>TO<TAB>SEX<TAB>PLOIDY Overwrites -p
@@ -89,15 +90,15 @@ nthreads=$((($ncores - $ncores % 3) / 3)) # Want multithreading, but, since I'm 
 
 # Need to test if we want all the results in one file or separately
 
-if [ $separate -eq FALSE ]; then
-	if [ -z ${ploidy+x}]; then # Testing if ploidy is unset
+if [ $separate == "FALSE" ]; then
+	if [ -z ${ploidy+x} ]; then # Testing if ploidy is unset
 	
-		bcftools mpileup -Ou -f $reference Input/*{bam,sam} --threads $nthreads \|
+		bcftools mpileup -Ou -f $reference $folder/* --threads $nthreads \|
 		       bcftools call -Ou -mv --ploidy-file $ploidyFile --threads $nthreads \|
 		       bcftools filter -s LowQual -e "%QUAL<$minqual" -Oz6 --threads $nthreads > ${out}.vcf.gz
 	
 	else
-		bcftools mpileup -Ou -f $reference Input/*{bam,sam} --threads $nthreads \|
+		bcftools mpileup -Ou -f $reference $folder/* --threads $nthreads \|
 			bcftools call -Ou -mv --ploidy $ploidy --threads $nthreads \|
 		       	bcftools filter -s LowQual -e "%QUAL<$minqual" -Oz6 --threads $nthreads > ${out}.vcf.gz
 	
@@ -106,11 +107,11 @@ else
 
 	# Setting up the loop
 	mkdir -p ${out}VCFFiles
-	total=$(find $input/ -type f | grep -cE "\.sam$|\.bam$")
+	total=$(find $folder/ -type f | grep -cE "\.sam$|\.bam$")
 	count=0
 	
 	ProgressBar $count $total
-	if [ -z ${ploidy+x}]; then # Testing if ploidy is unset
+	if [ -z ${ploidy+x} ]; then # Testing if ploidy is unset
 	
 		for file in Input/*{bam,sam}; do
 
