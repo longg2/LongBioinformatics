@@ -49,6 +49,7 @@ declare -i ncores=8
 log="$(date +'%Y%m%d').log"
 dedup="FALSE"
 multi="FALSE"
+export -f samtoolsDeduplication
 
 ##############
 ### The UI ###
@@ -120,7 +121,7 @@ mkdir -p ${out}BWALogs
 mkdir -p ${out}Depths
 [ "${multi}" == "TRUE" ] && mkdir -p ${out}MQ0Bam 
 #[ "${multi}" == "TRUE" ] && mkdir -p ${out}Qual0Reads 
-[ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
+[ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings ${out}DuplicationStats
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 #echo ${samples[@]}
@@ -177,7 +178,8 @@ fi
 
 if [ "${dedup}" == "TRUE" ]; then
 	printf "\nDeduplication Requested\n"
-	parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
+	#parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # <- This requires the biohazard suite to be installed. Is a pain since it's in Haskell
+	parallel -j $ncores --bar "samtoolsDeduplication {} ${out}DeduplicatedMappings/{/} ${out}DuplicationStats/ > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
 	printf "Getting Read Depths\n"
 	parallel -j $ncores --bar "samtools depth -a {} > ${out}Depths/{/.}.tab" ::: ${out}DeduplicatedMappings/*bam # Getting the read depths. Something that I end up doing often anyways
 	printf "Getting Mean and SD of Depths\n"

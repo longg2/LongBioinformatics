@@ -16,10 +16,15 @@ snippyParallel(){ # Want this to figure out what kind of Snippy run its doing
 	# This is what will run the correct version of the snippy command
 	if echo $fileExtension | grep -P -i -q "bam"; then
 	#	echo "BAM"
-		snippy --bam $seqFile --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 8 --force --quiet 
+		snippy --bam $seqFile --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 8 --force 
 	elif echo $fileExtension | grep -P -i -q "fastq|fq"; then
-	#	echo "Single Ended (Merged?)"
+#		if echo $seqFile | grep -P -i -q "_R1.f|_1.f"; then
+#	#		echo "Paired End"
+#			snippy --R1 $seqFile --R2 ${seqFile/1./2.} --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 8 --force --quiet
+		#elif echo $seqFile | grep -v -P -i -q "_R2.f|_R1.f|_1.f|_2.f"; then
+	#		echo "Single Ended (Merged?)"
 		snippy --se $seqFile --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 8 --force --quiet
+		#fi
 	elif echo $fileExtension | grep -P -i -q "fasta|fna|fa"; then
 	#	echo "Contigs/Genomes"
 		snippy --ctgs $seqFile --reference $reference --outdir ${out}/$sampleName --prefix $sampleName --mincov $mincov --mapqual 30 --cpus 8 --force --quiet

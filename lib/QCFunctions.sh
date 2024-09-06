@@ -208,6 +208,58 @@ FastpWrapperAncientAssembly(){ # Convenient Wrapper for parallelization
 #######################
 ### Modern Trimming ###
 #######################
+TrimmingModern(){ # Performing the trimming
+	# Trimming
+	local r1=$1
+	local r2=$2
+	local sample=$3
+	local out=$4
+	local jobs=$5
+	local totalThreads=$6
+	
+#	# Need to control for differences between info2020 and the rest
+#	if [ "$HOSTNAME" == "info2020" ]; then
+#		local localFolder="local-centos6"
+#	else
+#		local localFolder="local"
+#
+#	fi
+
+	if [[ $jobs == 1 ]]; then
+		local threads=$totalThreads
+	else
+		local threads=16
+	fi
+
+	if [ "$r2" == "NA" ]; then # If not a paired sample...
+		#echo "$sample is a SE sample"
+        	fastp -i $r1 \
+		--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
+        	--low_complexity_filter --correction \
+        	--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15 \
+        	--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3 \
+        	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3 \
+        	--length_required $len \
+        	--html ${out}FastpLogs/${sample}.html \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread $threads -R $sample \
+        	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
+	else
+		#echo "$sample is a PE sample"
+        	fastp -i $r1 -I $r2 \
+		--out1 ${out}Trimmed/${sample}_r1.fastq.gz \
+		--out2 ${out}Trimmed/${sample}_r2.fastq.gz \
+        	--detect_adapter_for_pe --correction --low_complexity_filter \
+        	--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15 \
+        	--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3 \
+        	--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3 \
+        	--length_required $len \
+        	--html ${out}FastpLogs/${sample}.html \
+        	--json ${out}FastpLogs/${sample}.json -R $sample --thread $threads -R $sample \
+        	--unpaired1 ${out}Trimmed/${sample}_u1.fastq.gz \
+        	--unpaired2 ${out}Trimmed/${sample}_u2.fastq.gz \
+        	--failed_out ${out}FailedQC/${sample}_failed.fastq.gz;
+	fi
+}
 Trimming(){ # Performing the trimming
 	# Trimming
 	local r1=$1
@@ -261,6 +313,13 @@ Trimming(){ # Performing the trimming
 	fi
 }
 
+FastpWrapperModern(){ # Convenient Wrapper for parallelization
+	local sample=$1
+
+	FileIdentificationInFunction $sample $folder
+	FileExtractionInFunction $folder
+	TrimmingModern $r1 $r2 $sample $out $njobs $ncores 2> ${out}FastpLogNorm/$sample.log
+} 
 FastpWrapper(){ # Convenient Wrapper for parallelization
 	local sample=$1
 

@@ -53,7 +53,7 @@ log="$(date +'%Y%m%d').log"
 declare -i ncores=10
 filter=25
 export out="Phylogenetics"
-bootstrap=100
+bootstrap=1000
 mincov=10
 while getopts "i:r:f:n:g:o:m:l:b:h" arg; do
         case $arg in
@@ -120,9 +120,9 @@ mkdir -p ${out}IQTREE
 export -f snippyParallel
 
 # Activating conda environments so that we can switch when needed
-source ~/miniconda3/etc/profile.d/conda.sh # Activating 
-conda activate base
-conda activate pangenome
+#source ~/miniconda3/etc/profile.d/conda.sh # Activating 
+#conda activate base
+#conda activate pangenome
 
 ############# Running SNIPPY ###############
 # Getting the SNPs
@@ -138,7 +138,7 @@ snippy-clean_full_aln ${out}Snippy/core.full.aln > ${out}Snippy/clean.full.aln
 
 ########## Time for Gubbins #############
 echo "Running Gubbins"
-conda activate phylogenies # Need to activate
+#conda activate phylogenies # Need to activate
 
 # Running Gubbins is relatively simple, if potentially long...
 #run_gubbins.py --outgroup $outgroup --threads $ncores \
@@ -164,7 +164,7 @@ snp-sites -c ${out}Gubbins/RecombMask.filtered_polymorphic_sites.fasta > ${out}G
 echo "Building the phylogeny"
 iqtree2 -s ${out}Gubbins/clean.core.aln -o Reference -m MFP+ASC \
 	-T AUTO --threads-max $ncores \
-	-b $bootstrap --prefix ${out}IQTREE/Phylogeny
+	-B $bootstrap --prefix ${out}IQTREE/Phylogeny
 
 if [ $? -eq 1 ]; then
 	echo "IQTREE failed. Please look at the logs to figure out where"

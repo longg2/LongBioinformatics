@@ -6,12 +6,10 @@ script_full_path=$(dirname $0)
 source $script_full_path/lib/BasicCommands.sh # This loads the basic things I need.
 source $script_full_path/lib/QCFunctions.sh # This loads the QC commands
 # These are the files and variables that will be needed
-usage() { printf 'Modern QC Script V1.1
+usage() { printf 'Modern QC Script V1.2
 	Now with SRA Handling and string deduplication removed.
-	Please note that this script will be removed in the future,
-	as it does the same thing my Ancient DNA Trimming.
-	This is a minimal script. All it will do is trim, merge,
-	and Pool the reads. Assumes you have fastp.
+	This is a minimal script. All it will do is trim, and
+	pool the reads. Assumes you have fastp.
         -i\tThe folder that contains the Raw sequencing files
 	-o\tThe output prefix (Default: QC)
 	-n\tNumber of CPU Threads to be used (Default: 16)
@@ -28,8 +26,8 @@ log() {	printf "Mapping settings for $(date):
 	-------------------------------------\n"; exit 0;
 }
 
-export -f Trimming
-export -f FastpWrapper
+export -f TrimmingModern
+export -f FastpWrapperModern
 export -f FileIdentificationInFunction
 export -f FileExtractionInFunction
 
@@ -98,7 +96,7 @@ if [[ $njobs -eq 0 ]]; then
 fi
 
 
-parallel -j $njobs --bar "FastpWrapper {}" ::: ${samples[@]}
+parallel -j $njobs --bar "FastpWrapperModern {}" ::: ${samples[@]}
 
 ###################
 ###Pooling Lanes###
@@ -114,15 +112,17 @@ pooledNames=( $(echo ${pooledNames[@]} | tr  ' ' '\n' | uniq | tr '\n' ' ') ) # 
 
 printf "\nPooling the lanes together\n"
 
-parallel --bar -j $ncores "cat ${out}Trimmed/{}*merged.fastq.gz > ${out}PooledLanes/{}.fastq.gz;
-	cat ${out}Trimmed/{}*r1.fastq.gz > ${out}PooledLanes/{}_r1.fastq.gz;
+parallel --bar -j $ncores "cat ${out}Trimmed/{}*r1.fastq.gz > ${out}PooledLanes/{}_r1.fastq.gz;
 	cat ${out}Trimmed/{}*r2.fastq.gz > ${out}PooledLanes/{}_r2.fastq.gz;" ::: "${pooledNames[@]}" # "${samples[@]}"
+#parallel --bar -j $ncores "cat ${out}Trimmed/{}*merged.fastq.gz > ${out}PooledLanes/{}.fastq.gz;
+#	cat ${out}Trimmed/{}*r1.fastq.gz > ${out}PooledLanes/{}_r1.fastq.gz;
+#	cat ${out}Trimmed/{}*r2.fastq.gz > ${out}PooledLanes/{}_r2.fastq.gz;" ::: "${pooledNames[@]}" # "${samples[@]}"
 
 find ${out}PooledLanes -type f -empty -exec rm {} \;
 ###############################################
 ### Now to get the FLDs of the Merged Reads ###
 ###############################################
-
-mkdir -p ${out}FLD
-
-parallel --bar -j $ncores "zcat ${out}PooledLanes/{}.fastq.gz | $script_full_path/lib/FLDFastq.awk | sort -n | uniq -c | sed -e 's/^ *//g' -e 's/ /\t/g' > ${out}FLD/{}.tab" ::: "${pooledNames[@]}"
+#
+#mkdir -p ${out}FLD
+#
+#parallel --bar -j $ncores "zcat ${out}PooledLanes/{}.fastq.gz | $script_full_path/lib/FLDFastq.awk | sort -n | uniq -c | sed -e 's/^ *//g' -e 's/ /\t/g' > ${out}FLD/{}.tab" ::: "${pooledNames[@]}"

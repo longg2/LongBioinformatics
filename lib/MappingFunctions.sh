@@ -234,6 +234,21 @@ bowtie2Mapping(){ # Bowtie2 Mapping. Using local mapping with the very sensitive
 
 }
 
+samtoolsDeduplication(){ # Deduplication suing samtools markdup
+	# Setting up the functions
+	local inFile=$1
+	local outFile=$2
+	local statsFolder=$3
+	local sample=$(basename $inFile .bam)
+
+	# We need to resort the reads by name and run fix mate first
+	samtools sort -n $inFile | samtools fixmate -m - - |\
+		samtools sort - |\
+		samtools markdup -r -S -f $statsFolder/$sample.tab - $outFile
+
+	# The other two lines deduplicate the reads *and* resort bam file by co-ordinates
+}
+
 memMapping(){ # BWA mem Mapping.  Automatically determines if merged or paired.
 	if [ "$merged" != "NA" ]; then # If I found a merged file
 	#if [ -v merged ]; then # If I found a merged file
@@ -267,23 +282,23 @@ memMapping(){ # BWA mem Mapping.  Automatically determines if merged or paired.
 	if [ "$merged" != "NA" ] && [ "$r1" != "NA" ] && [ "$r2" != "NA" ]; then
 		#samtools merge -r -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam 
 		samtools merge -r -f tmpMerged.bam tmpM.bam tmpP.bam 
-		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpMerged.bam
+		samtools addreplacerg -@ $((ncores - 1)) -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpMerged.bam
 		rm tmpP.bam tmpM.bam tmpMerged.bam
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 	#	mv tmpSingle.bam  ${out}MappedReads/$sample.bam 
-		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpSingle.bam
+		samtools addreplacerg -@ $((ncores - 1)) -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpSingle.bam
 	elif [ "$merged" != "NA" ] && [ "$r1" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 		#mv tmpM.bam ${out}MappedReads/$sample.bam 
-		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpM.bam
+		samtools addreplacerg -@ $((ncores - 1)) -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpM.bam
 	else
 		#mv tmpP.bam ${out}MappedReads/$sample.bam
-		samtools addreplacerg -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpP.bam
+		samtools addreplacerg -@ $((ncores - 1)) -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpP.bam
 	fi
 
 	# Deleting temporary files
-	rm tmp.bam
+	rm tmp*.bam
 
 }
 vgMapping(){

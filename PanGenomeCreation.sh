@@ -19,6 +19,7 @@ usage() { printf 'Pan-Genome Creation V1
         -i\tThe folder containing the genomes
 	-p\tThe Prokka Output folder
 	-r\tThe Roary Output folder
+	-d\tThe Bakta Database
 	-l\tThe Log file (Default: current date)
 	-t\tSet of Trusted Proteins
         -n\tNumber of CPU Threads to be used
@@ -58,9 +59,9 @@ while getopts "i:p:r:t:l:d:n:h" arg; do
                 n)
                         ncores=${OPTARG}
                         ;;
-#		d)
-#			baktaDB=${OPTARG}
-#			;;
+		d)
+			baktaDB=${OPTARG}
+			;;
                 h | *)
                         usage
                         exit 0
@@ -78,8 +79,8 @@ mkdir -p $AnnotOut
 #fi
 
 echo "Annotating the genomes"
-parallel -j 1 --bar "prokka {} --outdir $AnnotOut --prefix {/.} --force --proteins $trustedProteins --cpus $ncores --kingdom bacteria --gcode 11 --quiet --compliant" ::: $folder/{*.fasta,*.fa,*.fna}
-#parallel -j 1 --bar "bakta {} --output $AnnotOut --prefix {/.} --keep-contig-headers --db $baktaDB --proteins $trustedProteins --threads $ncores" ::: $folder/{*.fasta,*.fa,*.fna}
+#arallel -j 1 --bar "prokka {} --outdir $AnnotOut --prefix {/.} --force --proteins $trustedProteins --cpus $ncores --kingdom bacteria --gcode 11 --quiet --compliant" ::: $folder/{*.fasta,*.fa,*.fna}
+parallel -j 1 --bar "bakta {} --output $AnnotOut --prefix {/.} --force --keep-contig-headers --db $baktaDB --proteins $trustedProteins --threads $ncores" ::: $folder/{*.fa*,*.fna*}
 #
 ## Need to do some edits to ensure that the Bakta annotation is compattible with Panaroo
 #echo "Modifying the GFF3s for Roary"
@@ -87,7 +88,7 @@ parallel -j 1 --bar "prokka {} --outdir $AnnotOut --prefix {/.} --force --protei
 #parallel -j $ncores --bar "cat <(modGFF3 $AnnotOut/{/.}.gff3) $folder/{/.}.fna > ModGFF3/{/}" ::: $AnnotOut/*gff3
 #
 #echo "Now to run Roary"
-roary -p $ncores -e -n -s -cd 95 -i 90 -f $RoaryOut -r $AnnotOut/*.gff
+#roary -p $ncores -e -n -s -cd 95 -i 90 -f $RoaryOut -r $AnnotOut/*.gff
 
 echo "Creating the pan-genome"
-#panaroo -t $ncores --merge_paralogs --clean-mode strict -a core -o $RoaryOut -i ModGFF3/*.gff3 --remove-invalid-genes # Removing invalid genes ensures that we're not dealing with pseudogenes in the pan-genome
+panaroo -t $ncores --clean-mode strict -a core -o $RoaryOut -i $AnnotOut/*.gff3 --remove-invalid-genes # Removing invalid genes ensures that we're not dealing with pseudogenes in the pan-genome

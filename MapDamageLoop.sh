@@ -47,7 +47,7 @@ mkdir -p FLD$out
 mkdir -p Mismatches$out
 
 parallel -j $ncores --bar "samtools view -h -F 1 {} > tmp{%}.sam;
-			mapDamage --merge-reference-sequences -t {/.} -i tmp{%}.sam -r $ref -d MapDamage$out/{/.};
+			mapDamage --merge-reference-sequences --rescale -t {/.} -i tmp{%}.sam -r $ref -d MapDamage$out/{/.};
 			samtools stats {} | grep '^RL' | cut -f 2- > FLD${out}/{/.}.tab;
 			samtools view {} | cut -f 13 | tr -d 'NM:i:' | sort | uniq -c > Mismatches${out}/{/.}.tab" ::: $in/*
 rm -f tmp*.sam

@@ -35,9 +35,9 @@ fi
 
 identifier="T${taxa}D$(date +"%Y%m%d")"
 # This downloads the genomes, gff, and gbk files from NCBI
-datasets download genome taxon $taxa --assembly-source RefSeq \
-       	--filename RefseqGenomes${identifier}.zip \
-       	--assembly-level scaffold,chromosome,complete --exclude-atypical \
+datasets download genome taxon $taxa --assembly-source GenBank \
+       	--filename GenBankGenomes${identifier}.zip \
+       	--assembly-level contig,scaffold,chromosome,complete --exclude-atypical \
        	--include genome,gff3,gbff
 
 # Now, we'll start with extracting the dates. At least for me, these are fairly important for my phylogenies.
@@ -45,11 +45,11 @@ datasets download genome taxon $taxa --assembly-source RefSeq \
 # they're not always present. If so, we'll take the earliest of either the assembly date or the biosample 
 # submission date. Some of the older assemblies were uploaded years before their associated biosample
 
-dataformat tsv genome --package RefseqGenomesT${taxa}D$(date +"%Y%m%d").zip \
-	--fields accession,assminfo-biosample-publication-date,assminfo-release-date,assminfo-biosample-attribute-name,assminfo-biosample-attribute-value > ${identifier}DatesRaw.tab
+dataformat tsv genome --package GenBankGenomesT${taxa}D$(date +"%Y%m%d").zip \
+	--force --fields accession,assminfo-biosample-publication-date,assminfo-release-date,assminfo-biosample-attribute-name,assminfo-biosample-attribute-value > ${identifier}DatesRaw.tab
 
-dataformat tsv genome --package RefseqGenomesT${taxa}D$(date +"%Y%m%d").zip \
-	--fields accession,assminfo-biosample-attribute-name,assminfo-biosample-attribute-value > ${identifier}OtherMetaData.tab
+dataformat tsv genome --package GenBankGenomesT${taxa}D$(date +"%Y%m%d").zip \
+	--force --fields accession,assminfo-biosample-attribute-name,assminfo-biosample-attribute-value > ${identifier}OtherMetaData.tab
 	#
 # Loading the two different version in memory
 mapfile -t collection < <(grep "collection_date" ${identifier}DatesRaw.tab)
@@ -62,9 +62,9 @@ $script_full_path/NCBIDateParsing.awk <(printf "%s\n" "${collection[@]}") <(prin
 mkdir -p ${identifier}Genomes
 #mkdir ${identifier}GFF
 #mkdir ${identifier}GBK
-unzip -j RefseqGenomes${identifier}.zip ncbi_dataset/data/GCF*/*fna -d ${identifier}Genomes > /dev/null 2> /dev/null
-#unzip -j RefseqGenomes${identifier}.zip ncbi_dataset/data/GCF*/*gff -d ${identifier}GFF
-#unzip -j RefseqGenomes${identifier}.zip ncbi_dataset/data/GCF*/*gbff -d ${identifier}GBK
+unzip -j GenBankGenomes${identifier}.zip ncbi_dataset/data/GCF*/*fna -d ${identifier}Genomes > /dev/null 2> /dev/null
+#unzip -j GenBankGenomes${identifier}.zip ncbi_dataset/data/GCF*/*gff -d ${identifier}GFF
+#unzip -j GenBankGenomes${identifier}.zip ncbi_dataset/data/GCF*/*gbff -d ${identifier}GBK
 
 # Some quick niceties here for myself
 #rename .gff3 .gff ${identifier}GFF/*.gff3

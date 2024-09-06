@@ -16,7 +16,7 @@ usage() { printf "BlastN/P Wrapper Script V0.9
 	-o\tOutput Folder (Default = BlastOut)
 	-m\tUse Diamond for the analysis (Default = FALSE)
 	-b\tblastn, blastp, or blastx? (Default = blastn)
-	-d\tBlast database (Default = /1/scratch/blastdb/nt)
+	-d\tBlast database (Default = $db)
 	-e\tMaximum Evalue (Default = 1e-5)
 	-k\tRead Length (Default = 30)
 	-p\tPercent Identity (Default = 90)
@@ -32,7 +32,6 @@ log() {	printf "Blast settings for $(date):
 	Diamond:\t${diamond}
 	Blast Type:\t${blast}
 	Blast Database:\t${db}
-	Computer:\t${HOSTNAME}
 	-------------------------------------
 	E-value:\t${Eval}
 	Percent Identity:\t${Pident}
@@ -44,14 +43,15 @@ log() {	printf "Blast settings for $(date):
 }
 
 # Not a fan of this as it limits it to me only....
-source ~/miniconda3/etc/profile.d/conda.sh # Activating 
-conda activate base
-conda activate pangenome
+#source ~/miniconda3/etc/profile.d/conda.sh # Activating 
+#conda activate base
+#conda activate pangenome
 
 export -f FastaorFastq # important as I'm running this in parallel
 export -f GzipDetection # important as I'm running this in parallel
 export -f LCA # important as I'm running this in parallel
 export -f RandomFastaSelection # This is to remove my reliance on seqkit
+export TAXONKIT_DB # Need taxonkit to see it!
 #export -f ProgressBar
 
 # Preset Variables
@@ -59,12 +59,13 @@ export -f RandomFastaSelection # This is to remove my reliance on seqkit
 #echo $(which blastn) 
 #exit 0
 blast="blastn"
-if [[ $HOSTNAME == "info113" ]]; then
-	db="/1/scratch/blastdb/nt_v5"
-else
-	db="/1/scratch/blastdb/nt"
-fi
-
+#if [[ $HOSTNAME == "info113" ]]; then
+#	db="/1/scratch/blastdb/nt_v5"
+#else
+#	db="/1/scratch/blastdb/nt"
+#fi
+#
+db="/NetFile/Databases/NCBI/blast_nt_db/nt_blast"
 declare -i Pident=90
 declare -i len=30
 declare -i subsample=0
@@ -148,7 +149,7 @@ else
 
 	mkdir -p ${out}prinseqLog
 	echo "String Deduplciation with prinseq"
-	ls -1rt ${out}FastaOnly/* | parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null"
+	ls -1rt ${out}FastaOnly/* | parallel -j $ncores --bar "prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null"
 	#parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null" ::: ${out}FastaOnly/*
 fi
 rm -rf ${out}FastaOnly

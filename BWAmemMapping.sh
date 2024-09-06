@@ -45,6 +45,7 @@ out="BWAMappingScript"
 declare -i ncores=8
 log="$(date +'%Y%m%d').log"
 dedup="FALSE"
+export -f samtoolsDeduplication
 
 ##############
 ### The UI ###
@@ -107,7 +108,8 @@ log | tee $log # The inital log file
 mkdir -p ${out}MappedReads
 mkdir -p ${out}UnmappedReads 
 mkdir -p ${out}BWALogs
-[ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
+[ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings ${out}DuplicationStats
+#[ "${dedup}" == "TRUE" ] && mkdir -p ${out}DeduplicatedMappings
 
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 #echo ${samples[@]}
@@ -135,7 +137,8 @@ mkdir ${out}Depths/
 # Now we split based on if we want to deduplicate
 if [ "${dedup}" == "TRUE" ]; then
 	echo "Deduplication Requested"
-	parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
+	parallel -j $ncores --bar "samtoolsDeduplication {} ${out}DeduplicatedMappings/{/} ${out}DuplicationStats/ > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
+	#parallel -j $ncores --bar "/usr/local/biohazard/bin/bam-rmdup -c -o ${out}DeduplicatedMappings/{/} {} > /dev/null 2> /dev/null" ::: ${out}MappedReads/*bam # Removes Duplicates
 	parallel -j $ncores --bar "samtools depth -a {} > ${out}Depths/{/.}.tab" ::: ${out}DeduplicatedMappings/*bam # Getting the read depths. Something that I end up doing often anyways
 	parallel -j $ncores --bar "$script_full_path/DepthStatistics.awk {}" ::: ${out}Depths/*tab > DepthStatistics.tab # This is the script that will calculate the depths.
 	gzip ${out}Depths/*
