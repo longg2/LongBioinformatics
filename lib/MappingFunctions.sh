@@ -119,8 +119,14 @@ alnMapping(){ # BWA aln Mapping.  Automatically determines if merged or paired.
 		bwa aln -o 2 -n 0.01 -l 16500 $ref $r2 -t $ncores  > tmp2.sai # Second Index
 	
 		bwa sampe -n 10 $ref tmp1.sai tmp2.sai $r1 $r2  |\
-			samtools view -b -h -F 4 -m $len -q $qual -U tmpPBad.bam |\
-		       	samtools sort - > tmpP.bam 
+		       	samtools view -b -h -m $len -q $qual -U tmpPBad.bam |\
+			samtools sort -n - | samtools fixmate -r -m - - |\
+			samtools view -b -h -F 2048 |\
+	       		samtools sort - > tmpP.bam
+
+			# 2024-09-06: Old way of handling paired reads. Wasn't really accounting for PEs the right way. The above fixes it since I've included fixmate
+			#samtools view -b -h -F 4 -m $len -q $qual -U tmpPBad.bam |\
+		       	#samtools sort - > tmpP.bam 
 		
 		if [ "$multi" != "TRUE" ]; then
 			samtools fastq -c 6 tmpPBad.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null 
@@ -270,8 +276,14 @@ memMapping(){ # BWA mem Mapping.  Automatically determines if merged or paired.
 	
 	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If I found a merged file
 	#if [ -v r1 ]; then # If we have paired reads
-		bwa mem $ref $r1 $r2 -t $ncores | samtools view -b -h -F 4 -m $len -q $qual -U tmp.bam |\
+		bwa mem $ref $r1 $r2 -t $ncores |\
+		       	samtools view -b -h -m $len -q $qual -U tmp.bam |\
+			samtools sort -n - | samtools fixmate -r -m - - |\
+			samtools view -b -h -F 2048 |\
 	       		samtools sort - > tmpP.bam
+			# 2024-09-06: Old way of handling paired reads. Wasn't really accounting for PEs the right way. The above fixes it since I've included fixmate
+		#bwa mem $ref $r1 $r2 -t $ncores | samtools view -b -h -f 3 -m $len -q $qual -U tmp.bam |\
+	       	#	samtools sort - > tmpP.bam
 	
 		samtools fastq -c 6 tmp.bam -1 ${out}UnmappedReads/${sample}_r1.fastq.gz -2 ${out}UnmappedReads/${sample}_r2.fastq.gz -s /dev/null
 	
@@ -283,7 +295,7 @@ memMapping(){ # BWA mem Mapping.  Automatically determines if merged or paired.
 		#samtools merge -r -f ${out}MappedReads/$sample.bam tmpM.bam tmpP.bam 
 		samtools merge -r -f tmpMerged.bam tmpM.bam tmpP.bam 
 		samtools addreplacerg -@ $((ncores - 1)) -r ID:$sample -r SM:$sample -o ${out}MappedReads/$sample.bam tmpMerged.bam
-		rm tmpP.bam tmpM.bam tmpMerged.bam
+		#rm tmpP.bam tmpM.bam tmpMerged.bam
 	elif [ "$merged" == "NA" ] && [ "$r1" != "NA" ] && [ "$r2" == "NA" ]; then
 	#elif [ -v merged ] && [ -z ${r1+x} ]; then
 	#	mv tmpSingle.bam  ${out}MappedReads/$sample.bam 
