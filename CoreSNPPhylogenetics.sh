@@ -149,8 +149,7 @@ echo "Running Gubbins"
 #
 run_gubbins.py --outgroup $outgroup --threads $ncores \
 	--filter-percentage $filter \
-       	--tree-builder iqtree \
-	--bootstrap $bootstrap --best-model --first-model GTRGAMMA \
+	--bootstrap $bootstrap --model GTRGAMMA \
 	--prefix ${out}Gubbins/RecombMask ${out}Snippy/clean.full.aln
 
 if [ $? -eq 1 ]; then

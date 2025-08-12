@@ -9,7 +9,7 @@ source $script_full_path/lib/BasicCommands.sh # This loads the basic things I ne
 source $script_full_path/lib/BlastFunctions.sh # This loads the QC commands
 usage() { printf "BlastN/P Wrapper Script V0.9
 	Outputs tab deliminated BlastN/P report file in the form of std staxid.  Taxa counts
-	for each step are also outputted.  Need seqkit for subsampling.	String Deduplication occurs.
+	for each step are also outputted.  Need seqkit for subsampling.
 	LCA Analysis requires taxonkit <https://github.com/shenwei356/taxonkit>
 	TBD: Remove Seqkit Completely
         -i\tInput Folder
@@ -54,17 +54,7 @@ export -f RandomFastaSelection # This is to remove my reliance on seqkit
 export TAXONKIT_DB # Need taxonkit to see it!
 #export -f ProgressBar
 
-# Preset Variables
-#export alias blastn="~/miniconda3/envs/pangenome/bin/blastn" # Will it work?
-#echo $(which blastn) 
-#exit 0
 blast="blastn"
-#if [[ $HOSTNAME == "info113" ]]; then
-#	db="/1/scratch/blastdb/nt_v5"
-#else
-#	db="/1/scratch/blastdb/nt"
-#fi
-#
 db="/NetFile/Databases/NCBI/blast_nt_db/nt_blast"
 declare -i Pident=90
 declare -i len=30
@@ -137,28 +127,28 @@ mkdir -p ${out}FastaOnly
 echo "Converting FastQ to Fasta"
 ls -1rt IntGzip/* | parallel -j $ncores --bar "FastaorFastq {} ${out}FastaOnly"
 # parallel -j $ncores --bar "FastaorFastq {} ${out}FastaOnly" ::: IntGzip/*
-rm -rf IntGzip
+#rm -rf IntGzip
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup
 
-if [[ "${blast}" == "blastp" ]]; then
-	echo "BlastP requested.  String deduplication won't be performed"
-	cp ${out}FastaOnly/* ${out}StringDedup/
-else
-
-	mkdir -p ${out}prinseqLog
-	echo "String Deduplciation with prinseq"
-	ls -1rt ${out}FastaOnly/* | parallel -j $ncores --bar "prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null"
-	#parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null" ::: ${out}FastaOnly/*
-fi
-rm -rf ${out}FastaOnly
+#if [[ "${blast}" == "blastp" ]]; then
+#	echo "BlastP requested.  String deduplication won't be performed"
+#	cp ${out}FastaOnly/* ${out}StringDedup/
+#else
+#
+#	#mkdir -p ${out}prinseqLog
+#	echo "String Deduplciation with prinseq"
+##	ls -1rt ${out}FastaOnly/* | parallel -j $ncores --bar "prinseq++ -FASTA {} -out_good ${out}StringDedup/{/.} -out_bad /dev/null -min_len $len -derep"
+#	#parallel -j $ncores --bar "perl /home/sam/Applications/prinseq-lite-0.20.4/prinseq-lite.pl -fasta {} -out_good ${out}StringDedup/{/.} -out_bad null -min_len $len -derep 14 -log ${out}prinseqLog/{/.}.log 2> /dev/null" ::: ${out}FastaOnly/*
+#fi
+#rm -rf ${out}FastaOnly
 
 # The final step is to test if StringDeduplication will occur
 if [[ $subsample != 0 ]]; then
 	echo "Subsampling the files to ~$subsample reads"
 	mkdir -p ${out}Subsample
-	ls -1rt ${out}StringDedup/* | parallel -j $ncores --bar "RandomFastaSelection {} $subsample > ${out}Subsample/{/}"
+	ls -1rt ${out}FastaOnly/* | parallel -j $ncores --bar "RandomFastaSelection {} $subsample > ${out}Subsample/{/}"
 #	parallel -j $ncores --bar "RandomFastaSelection {} $subsample > ${out}Subsample/{/}" ::: ${out}StringDedup/*
 	#parallel -j $ncores --bar "seqkit sample {} -n $subsample > ${out}Subsample/{/} 2> /dev/null" ::: ${out}StringDedup/*
 fi
@@ -178,7 +168,7 @@ if [[ $subsample != 0 ]]; then
 		fi
 	done
 else
-	for final in ${out}StringDedup/*; do
+	for final in ${out}FastaOnly/*; do
 		if [[ $diamond == "TRUE" ]]; then
 			diamondCMD $final	
 		else

@@ -112,26 +112,26 @@ mkdir -p ${out}KrakenLog
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
 # We need to determine if the file is gzipped
-echo "Decompressing the files"
-mkdir -p IntGzip
+#echo "Decompressing the files"
+#mkdir -p IntGzip
 
 # I've run into the limits of parallel here, going to make it a file to read through instead
-echo "${files[@]}" | tr " " "\n" > file.tmp
-if [ $ncores > 30 ];
-then
-	#Preventing an accidental swamping of the cluster
-	ls -1 $folder | parallel -j 30 --bar "GzipDetection {} $folder"
-	#parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
-else
-	ls -1 $folder | parallel -j $ncores --bar "GzipDetection {} $folder"
-	#parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
-fi
-
-rm file.tmp
+#echo "${files[@]}" | tr " " "\n" > file.tmp
+#if [ $ncores > 30 ];
+#then
+#	#Preventing an accidental swamping of the cluster
+#	ls -1 $folder | parallel -j 30 --bar "GzipDetection {} $folder"
+#	#parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
+#else
+#	ls -1 $folder | parallel -j $ncores --bar "GzipDetection {} $folder"
+#	#parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
+#fi
+#
+#rm file.tmp
 
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup
-mkdir -p ${out}prinseqLog
+#mkdir -p ${out}prinseqLog
 mkdir -p TMP
 echo "String Deduplciation with prinseq"
 
@@ -140,20 +140,20 @@ echo "String Deduplciation with prinseq"
 #ProgressBar $count $total
 #for sample in ${samples[@]}
 #do
-#	StringDeduplication $sample IntGzip $len
+#	StringDeduplication $sample $folder $len
 #	count=$(echo "$count + 1" | bc)
 #	ProgressBar $count $total
 #done
 #printf "\n"
 if [ $ncores > 30 ];
 then
-	parallel -j 30 --bar "StringDeduplicationParallel {} IntGzip $len 2> /dev/null" ::: "${samples[@]}" # DOESN'T WORK!!
+	parallel -j 30 --bar "StringDeduplicationParallel {} $folder $len 2> /dev/null" ::: "${samples[@]}" 
 else
-	parallel -j $ncores --bar "StringDeduplicationParallel {} IntGzip $len 2> /dev/null" ::: "${samples[@]}" # DOESN'T WORK!!
+	parallel -j $ncores --bar "StringDeduplicationParallel {} $folder $len 2> /dev/null" ::: "${samples[@]}" 
 fi
 
-rm -rf TMP
-rm -rf IntGzip
+#rm -rf TMP
+#rm -rf IntGzip
 
 # Now for the Kraken Loop
 echo "Running Kraken2 on ${#samples[@]} samples"
@@ -169,9 +169,9 @@ done
 
 # Now to combine the reports and create the Krona Plot
 
-echo "Combining the Merged and Paired Reports and preparing for a Krona plot"
-parallel --bar -j $ncores "combine_kreports.py -r ${out}Reports/{}*tab --only-combined --no-header -o ${out}CombinedReports/{}.tab > /dev/null 2> /dev/null; kreport2krona.py -r ${out}CombinedReports/{}.tab -o ${out}Krona/{}.txt" ::: "${samples[@]}"
-ktImportText ${out}Krona/* -o KronaPlot.html # making the KronaPlot
+#echo "Combining the Merged and Paired Reports and preparing for a Krona plot"
+#parallel --bar -j $ncores "combine_kreports.py -r ${out}Reports/{}*tab --only-combined --no-header -o ${out}CombinedReports/{}.tab > /dev/null 2> /dev/null; kreport2krona.py -r ${out}CombinedReports/{}.tab -o ${out}Krona/{}.txt" ::: "${samples[@]}"
+#ktImportText ${out}Krona/* -o KronaPlot.html # making the KronaPlot
 #
 ## If requested, we want to also pull out the taxa of interest
 if [ $taxa != "NULL" ];then

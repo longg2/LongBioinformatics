@@ -91,4 +91,4 @@ parallel -j 1 --bar "bakta {} --output $AnnotOut --prefix {/.} --force --keep-co
 #roary -p $ncores -e -n -s -cd 95 -i 90 -f $RoaryOut -r $AnnotOut/*.gff
 
 echo "Creating the pan-genome"
-panaroo -t $ncores --clean-mode strict -a core -o $RoaryOut -i $AnnotOut/*.gff3 --remove-invalid-genes # Removing invalid genes ensures that we're not dealing with pseudogenes in the pan-genome
+panaroo -t $ncores --clean-mode strict -a core -o $RoaryOut -i $AnnotOut/*.gff3 --remove-invalid-genes --merge_paralogs # Removing invalid genes ensures that we're not dealing with pseudogenes in the pan-genome

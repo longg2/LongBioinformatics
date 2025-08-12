@@ -37,8 +37,8 @@ identifier="T${taxa}D$(date +"%Y%m%d")"
 # This downloads the genomes, gff, and gbk files from NCBI
 datasets download genome taxon $taxa --assembly-source GenBank \
        	--filename GenBankGenomes${identifier}.zip \
-       	--assembly-level contig,scaffold,chromosome,complete --exclude-atypical \
-       	--include genome,gff3,gbff
+       	--assembly-level scaffold,chromosome,complete --exclude-atypical \
+       	--include genome,gff3,gbff,protein
 
 # Now, we'll start with extracting the dates. At least for me, these are fairly important for my phylogenies.
 # The rationale for the following is that collection dates should take priority over everything else, but,

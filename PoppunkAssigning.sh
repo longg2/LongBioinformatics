@@ -134,7 +134,7 @@ if [ $(cat AllSamples.list | wc -l) -ge $gen ]; then
 			for f in old/*; do mv -f $f ${f/newOut/old}; done
 		fi
 
-		poppunk_assign --query $manifest --update-db --db old --out newOut --write-references --overwrite --threads $ncores 2>> $log
+		poppunk_assign --query $manifest --update-db --db old --out newOut --run-qc --write-references --overwrite --threads $ncores 2>> $log
 
 		if [ $? -gt 0 ]; then
 			printf "\nPoppunk encoutered an error at $manifest. Please go through the logs to figure out where and rerun from the beginning.\n"
@@ -153,7 +153,7 @@ if [ $(cat AllSamples.list | wc -l) -ge $gen ]; then
 	
 else
 	printf "$folder has more than 100 samples. Splitting the manifest file into 100 line chunks\n" | tee -a $log
-	poppunk_assign --query Allsamples.list --update-db --db $ref --out $out --write-references --overwrite --threads $ncores 2>> $log
+	poppunk_assign --query AllSamples.list --update-db --db $ref --out $out --run-qc --write-references --overwrite --threads $ncores 2>> $log
 fi
 
 # Some clean up now

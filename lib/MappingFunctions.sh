@@ -277,9 +277,9 @@ memMapping(){ # BWA mem Mapping.  Automatically determines if merged or paired.
 	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If I found a merged file
 	#if [ -v r1 ]; then # If we have paired reads
 		bwa mem $ref $r1 $r2 -t $ncores |\
-		       	samtools view -b -h -m $len -q $qual -U tmp.bam |\
+		       	samtools view -b -h -F 2048 -m $len -q $qual -U tmp.bam |\
 			samtools sort -n - | samtools fixmate -r -m - - |\
-			samtools view -b -h -F 2048 |\
+			#samtools view -b -h -F 2048 |\
 	       		samtools sort - > tmpP.bam
 			# 2024-09-06: Old way of handling paired reads. Wasn't really accounting for PEs the right way. The above fixes it since I've included fixmate
 		#bwa mem $ref $r1 $r2 -t $ncores | samtools view -b -h -f 3 -m $len -q $qual -U tmp.bam |\

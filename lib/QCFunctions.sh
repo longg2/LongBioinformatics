@@ -339,26 +339,26 @@ StringDeduplication(){
 	# Now for the actual deduplication
 	if [ "$merged" != "NA" ]; then # If I found a merged file
 		if [ "$Dedup" == "TRUE" ]; then
-			prinseq -fastq $merged -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz
+			prinseq++ -fastq $merged -out_bad null -out_good stdout -min_len $len -derep 14 -lc_dust 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz
 		else
-			prinseq -fastq $merged -out_bad null -out_good stdout -min_len $len -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz
+			prinseq++ -fastq $merged -out_bad null -out_good stdout -min_len $len -lc_dust 20 | gzip > ${out}StringDedup/${sample}_Merged.fastq.gz
 		fi
 	fi
 
 	if [[ $r1 != "NA" && $r2 == "NA" ]]; then # If dealing with a single end library
 		echo "Single"
 		if [ "$Dedup" == "TRUE" ]; then
-			prinseq -fastq $r1 -out_bad null -out_good stdout -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_r1.fastq.gz
+			prinseq++ -fastq $r1 -out_bad null -out_good stdout -min_len $len -derep 14 -lc_dust 20 | gzip > ${out}StringDedup/${sample}_r1.fastq.gz
 		else
-			prinseq -fastq $r1 -out_bad null -out_good stdout -min_len $len -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 | gzip > ${out}StringDedup/${sample}_r1.fastq.gz
+			prinseq++ -fastq $r1 -out_bad null -out_good stdout -min_len $len -lc_dust 20 | gzip > ${out}StringDedup/${sample}_r1.fastq.gz
 		fi
 	fi 
 
 	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If paired
 		if [ "$Dedup" == "TRUE" ]; then
-			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+			prinseq++ -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -lc_dust 20
 		else
-			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+			prinseq++ -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -lc_dust 20
 
 		fi
 
@@ -378,32 +378,32 @@ StringDeduplicationParallel(){
 	# Now for the actual deduplication
 	if [ "$merged" != "NA" ]; then # If I found a merged file
 		if [ "$Dedup" == "TRUE" ]; then
-			prinseq -fastq $merged -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20 
+			prinseq++ -fastq $merged -out_bad /dev/null -out_gz -out_good ${out}StringDedup/${sample}.fastq.gz -min_len $len -derep -lc_dust 20
 		else
-			prinseq -fastq $merged -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Merged.log -lc_method dust -lc_threshold 20
+			prinseq++ -fastq $merged -out_bad /dev/null -out_gz -out_good ${out}StringDedup/${sample}.fastq.gz -min_len $len -lc_dust 20 
 		fi
 	fi
 
 	if [[ $r1 != "NA" && $r2 == "NA" ]]; then # If dealing with a single end library
+		echo "Single"
 		if [ "$Dedup" == "TRUE" ]; then
-			prinseq -fastq $r1 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 
-		else
-			prinseq -fastq $r1 -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Single.log -lc_method dust -lc_threshold 20 
+			prinseq++ -fastq $r1 -out_bad /dev/null -out_gz -out_good ${out}StringDedup/${sample}_1.fastq.gz -min_len $len -derep -lc_dust 20
+		else                                                    
+			prinseq++ -fastq $r1 -out_bad /dev/null -out_gz -out_good ${out}StringDedup/${sample}_1.fastq.gz -min_len $len -lc_dust 20
 		fi
 	fi 
 
 	if [[ "$r1" != "NA" && "$r2" != "NA" ]]; then # If paired
 		if [ "$Dedup" == "TRUE" ]; then
-			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -derep 14 -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+			prinseq++ -fastq $r1 -fastq2 $r2 -out_gz -out_bad /dev/null -out_bad2 /dev/null -out_good ${out}StringDedup/${sample}_1.fastq.gz -out_good2 ${out}StringDedup/${sample}_2.fastq.gz -out_single /dev/null -out_single2 /dev/null -min_len $len -derep -lc_dust 20
 		else
-			prinseq -fastq $r1 -fastq2 $r2 -out_bad null -out_good TMP/${sample} -min_len $len -log ${out}prinseqLog/${sample}Paired.log -lc_method dust -lc_threshold 20
+			prinseq++ -fastq $r1 -fastq2 $r2 -out_gz -out_bad /dev/null -out_bad2 /dev/null -out_good ${out}StringDedup/${sample}_1.fastq.gz -out_good2 ${out}StringDedup/${sample}_2.fastq.gz -out_single /dev/null -out_single2 /dev/null -min_len $len -lc_dust 20
 
 		fi
 
 	# Because of how prinseq is coded, I'll need to compress separately	
-		gzip -c TMP/${sample}.fastq > ${out}StringDedup/${sample}.fastq.gz
-		gzip -c TMP/${sample}_1.fastq > ${out}StringDedup/${sample}_r1.fastq.gz
-		gzip -c TMP/${sample}_2.fastq > ${out}StringDedup/${sample}_r2.fastq.gz
+#		gzip -c TMP/${sample}_1.fastq > ${out}StringDedup/${sample}_r1.fastq.gz
+#		gzip -c TMP/${sample}_2.fastq > ${out}StringDedup/${sample}_r2.fastq.gz
 
 	fi
 
