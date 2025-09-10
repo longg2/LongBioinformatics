@@ -124,7 +124,7 @@ GzipDetection(){ # Need to ID Gzipped files and decompress if needed
 	if file $folder/$file | grep -q "compressed"; then
 		gunzip -c $folder/$file > IntGzip/$name
 	else
-		cp $folder/$file IntGzip/$name
+		ln -s $folder/$file IntGzip/$name 
 	fi
 }
 RandomFastaSelection(){

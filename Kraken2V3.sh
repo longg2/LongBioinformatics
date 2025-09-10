@@ -111,45 +111,19 @@ mkdir -p ${out}KrakenLog
 ## Getting the Sample Names
 DeduplicateArray "${files[@]}" # Deduplicating the array.  Outputs the variable samples
 
-# We need to determine if the file is gzipped
-#echo "Decompressing the files"
-#mkdir -p IntGzip
 
-# I've run into the limits of parallel here, going to make it a file to read through instead
-#echo "${files[@]}" | tr " " "\n" > file.tmp
-#if [ $ncores > 30 ];
-#then
-#	#Preventing an accidental swamping of the cluster
-#	ls -1 $folder | parallel -j 30 --bar "GzipDetection {} $folder"
-#	#parallel -j 30 --bar "GzipDetection {} $folder" ::: "${files[@]}"
-#else
-#	ls -1 $folder | parallel -j $ncores --bar "GzipDetection {} $folder"
-#	#parallel -j $ncores --bar "GzipDetection {} $folder" ::: "${files[@]}"
-#fi
-#
-#rm file.tmp
-
+if [ $Dedup == "TRUE" ]; 
+then
 # Now to string deduplicate the files as I'd like to speed up the blast runs
 mkdir -p ${out}StringDedup
-#mkdir -p ${out}prinseqLog
 mkdir -p TMP
 echo "String Deduplciation with prinseq"
-
-#total=${#samples[@]}
-#count=0
-#ProgressBar $count $total
-#for sample in ${samples[@]}
-#do
-#	StringDeduplication $sample $folder $len
-#	count=$(echo "$count + 1" | bc)
-#	ProgressBar $count $total
-#done
-#printf "\n"
-if [ $ncores > 30 ];
-then
-	parallel -j 30 --bar "StringDeduplicationParallel {} $folder $len 2> /dev/null" ::: "${samples[@]}" 
-else
-	parallel -j $ncores --bar "StringDeduplicationParallel {} $folder $len 2> /dev/null" ::: "${samples[@]}" 
+	if [ $ncores > 30 ];
+	then
+		parallel -j 30 --bar "StringDeduplicationParallel {} $folder $len 2> /dev/null" ::: "${samples[@]}" 
+	else
+		parallel -j $ncores --bar "StringDeduplicationParallel {} $folder $len 2> /dev/null" ::: "${samples[@]}" 
+	fi
 fi
 
 #rm -rf TMP
@@ -162,7 +136,12 @@ count=0
 ProgressBar $count $total
 for sample in "${samples[@]}";
 do
+	if [ $Dedup == "TRUE" ]; 
+	then
 	KrakenAnalysis $sample ${out}StringDedup $ncores 2> ${out}KrakenLog/${sample}.log # This here will do both Paired and unpaired runs.  Can't parallelize it either so it's the rate limiting step as well
+	else
+	KrakenAnalysis $sample ${folder} $ncores 2> ${out}KrakenLog/${sample}.log # This here will do both Paired and unpaired runs.  Can't parallelize it either so it's the rate limiting step as well
+	fi
 	count=$(echo "$count + 1" | bc)
 	ProgressBar $count $total
 done
